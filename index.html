@@ -10,27 +10,27 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
-  --bg:#F4F3EF;
+  --bg:#FFF8FA;
   --surface:#FFFFFF;
-  --surface-2:#FBFAF7;
-  --border:#DCD9D0;
-  --border-strong:#B9B4A6;
-  --text:#1C1B18;
-  --text-muted:#5A564C;
-  --text-faint:#8A8578;
+  --surface-2:#FFF1F5;
+  --border:#F3DCE5;
+  --border-strong:#EAB8CB;
+  --text:#2B1E29;
+  --text-muted:#8A6C7C;
+  --text-faint:#C79AAE;
 
-  --existing:#1B4C8C;      /* รายเดิม - deep blue */
-  --existing-bg:#E9EFF8;
-  --new:#1E7A4C;            /* รายใหม่ - forest green */
-  --new-bg:#E7F3EC;
-  --clear:#8A5A2B;          /* Clear - amber brown */
-  --clear-bg:#F5EBDD;
-  --net:#2B2A27;            /* รวมสุทธิ - near black/graphite */
-  --net-bg:#ECEAE4;
+  --existing:#D6336C;      /* รายเดิม - vivid rose */
+  --existing-bg:#FCE4EC;
+  --new:#0FA787;            /* รายใหม่ - bright teal green */
+  --new-bg:#DFF6EF;
+  --clear:#F08C00;          /* Clear - warm amber/gold */
+  --clear-bg:#FFF0DA;
+  --net:#7048B8;            /* รวมสุทธิ - vivid violet */
+  --net-bg:#F1E9FB;
 
-  --up:#B23A2E;             /* เพิ่มขึ้น */
-  --down:#1E6E4A;           /* ลดลง -- context: ลดลง = เงินลดลง (คืนเงิน/ตัดจ่าย) ใช้เขียว, เพิ่มขึ้น=แดงเพื่อเตือนให้ตรวจสอบ */
-  --flat:#8A8578;
+  --up:#E8546B;             /* เพิ่มขึ้น - coral pink */
+  --down:#0FA787;           /* ลดลง - teal green */
+  --flat:#B591A5;
 
   --radius-lg:16px;
   --radius-md:12px;
@@ -87,11 +87,11 @@ select.filter-select{
 }
 select.filter-select:hover{border-color:#8A8578;}
 .btn-reset{
-  font-size:14px; font-weight:700; color:#B23A2E; background:#FBEAE8; border:1.5px solid #EBC3BD;
+  font-size:14px; font-weight:700; color:#C23464; background:#FCE4EC; border:1.5px solid #F2B9CD;
   padding:8px 16px; border-radius:999px; cursor:pointer; display:flex; align-items:center; gap:6px;
   transition:background .15s;
 }
-.btn-reset:hover{background:#F6D8D4;}
+.btn-reset:hover{background:#F8CBDA;}
 .btn-reset:disabled{opacity:.35; cursor:default;}
 
 .chips-row{
@@ -151,9 +151,9 @@ section{margin-bottom:40px;}
 .trend-badge{
   display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; font-size:12.5px; font-weight:800;
 }
-.trend-up{background:#FBEAE8; color:var(--up);}
-.trend-down{background:#E4F3EB; color:var(--down);}
-.trend-flat{background:#EFEDE7; color:var(--flat);}
+.trend-up{background:#FCE4E8; color:var(--up);}
+.trend-down{background:#DFF6EF; color:var(--down);}
+.trend-flat{background:#F3E9EF; color:var(--flat);}
 
 /* ============ Charts ============ */
 .chart-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
@@ -284,7 +284,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 
   <section id="sec-cards">
     <div class="section-head">
-      <h2>ขั้นที่ 1 &middot; ภาพรวม</h2>
+      <h2>ภาพรวม</h2>
       <span class="hint" id="cards-hint">แสดงผลตามตัวกรองปัจจุบัน</span>
     </div>
     <div class="cards" id="cards"></div>
@@ -292,7 +292,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 
   <section id="sec-charts">
     <div class="section-head">
-      <h2>ขั้นที่ 2 &middot; อันดับตามมิติหลัก</h2>
+      <h2>อันดับตามมิติหลัก</h2>
       <span class="hint">คลิกแท่งเพื่อกรองข้อมูลทั้งหน้า &middot; คลิกซ้ำเพื่อยกเลิก</span>
     </div>
     <div class="chart-grid">
@@ -316,7 +316,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 
   <section id="sec-summary">
     <div class="section-head">
-      <h2>ขั้นที่ 3 &middot; ตารางสรุปตามประเภทรายการ</h2>
+      <h2>ตารางสรุปตามประเภทรายการ</h2>
     </div>
     <div class="table-wrap summary-table-wrap">
       <table id="summary-table">
@@ -623,9 +623,9 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 
   // ---------- Detail table ----------
   function chgPill(chg){
-    if (chg === 'เพิ่มขึ้น') return '<span class="chg-pill" style="background:#FBEAE8;color:var(--up);">&#9650; เพิ่มขึ้น</span>';
-    if (chg === 'ลดลง') return '<span class="chg-pill" style="background:#E4F3EB;color:var(--down);">&#9660; ลดลง</span>';
-    return '<span class="chg-pill" style="background:#EFEDE7;color:var(--flat);">&#9679; เท่าเดิม</span>';
+    if (chg === 'เพิ่มขึ้น') return '<span class="chg-pill" style="background:#FCE4E8;color:var(--up);">&#9650; เพิ่มขึ้น</span>';
+    if (chg === 'ลดลง') return '<span class="chg-pill" style="background:#DFF6EF;color:var(--down);">&#9660; ลดลง</span>';
+    return '<span class="chg-pill" style="background:#F3E9EF;color:var(--flat);">&#9679; เท่าเดิม</span>';
   }
   function typePill(t){
     const cls = t==='รายเดิม'?'type-existing':(t==='รายใหม่'?'type-new':'type-clear');
