@@ -81,6 +81,10 @@ button{font-family:inherit;}
   background:linear-gradient(92deg, var(--net) 0%, var(--existing) 100%);
   -webkit-background-clip:text; background-clip:text; color:transparent;
 }
+.brand h1 .tag-existing{color:var(--existing);}
+.brand h1 .tag-new{color:var(--new);}
+.brand h1 .tag-clear{color:var(--clear);}
+.brand h1 .tag-sep{color:var(--text-faint); font-weight:600;}
 .filter-group{display:flex; align-items:center; gap:8px;}
 .filter-group label{font-size:13px; color:var(--text-muted); font-weight:600; white-space:nowrap;}
 select.filter-select{
@@ -108,6 +112,7 @@ select.filter-select:hover{border-color:#8A8578;}
   background:var(--surface); border:1.5px solid var(--border-strong); border-radius:14px;
   box-shadow:var(--shadow-2); padding:10px; display:flex; flex-direction:column; gap:8px;
 }
+.combo-panel[hidden]{display:none;}
 .combo-search{
   display:flex; align-items:center; gap:8px; border:1.5px solid var(--border); border-radius:999px;
   padding:8px 14px; color:var(--text-muted);
@@ -310,7 +315,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   <div class="topbar-inner">
     <div class="brand">
       <span class="eyebrow">ภาพรวมรายการเงินตามกลุ่มดำเนินงาน</span>
-      <h1><span class="brand-accent">Dashboard</span> เงินรับฝาก / เงินจอง / เงินล่วงหน้า</h1>
+      <h1><span class="brand-accent">Dashboard</span> <span class="tag-existing">เงินรับฝาก</span> <span class="tag-sep">/</span> <span class="tag-new">เงินจอง</span> <span class="tag-sep">/</span> <span class="tag-clear">เงินล่วงหน้า</span></h1>
     </div>
     <div class="filter-group">
       <label for="f-kong">กอง</label>
@@ -546,12 +551,17 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       listEl.innerHTML = html;
       highlightIdx = -1;
       listEl.querySelectorAll('.combo-item').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
+        btn.addEventListener('click', (e)=>{
+          e.preventDefault();
+          e.stopPropagation();
           const v = btn.getAttribute('data-val');
           state.filters.proj = (v === 'all') ? 'all' : decodeURIComponent(v);
           state.page = 1;
           syncProjComboLabel();
-          closePanel();
+          searchInput.blur();
+          // defer hiding to the next tick so touch devices finish the
+          // current tap cycle before the panel disappears (avoids "ghost tap")
+          setTimeout(closePanel, 0);
           render();
         });
       });
@@ -569,7 +579,8 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       trigger.setAttribute('aria-expanded','false');
     }
 
-    trigger.addEventListener('click', ()=>{
+    trigger.addEventListener('click', (e)=>{
+      e.stopPropagation();
       if (panel.hidden) openPanel(); else closePanel();
     });
     searchInput.addEventListener('input', renderList);
@@ -583,7 +594,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       items.forEach((it,i)=>it.classList.toggle('highlighted', i===highlightIdx));
       if (items[highlightIdx]) items[highlightIdx].scrollIntoView({block:'nearest'});
     });
-    document.addEventListener('click', (e)=>{
+    document.addEventListener('pointerdown', (e)=>{
       if (!panel.hidden && !document.getElementById('proj-combo').contains(e.target)) closePanel();
     });
   }
