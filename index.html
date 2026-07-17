@@ -69,13 +69,17 @@ button{font-family:inherit;}
   display:flex; flex-wrap:wrap; align-items:center; gap:14px 20px;
 }
 .brand{
-  display:flex; flex-direction:column; gap:2px; margin-inline-end:auto;
+  display:flex; flex-direction:column; gap:3px; margin-inline-end:auto;
 }
 .brand .eyebrow{
-  font-size:12.5px; letter-spacing:.08em; color:var(--text-faint); font-weight:600;
+  font-size:13px; letter-spacing:.04em; color:var(--text-muted); font-weight:600;
 }
 .brand h1{
-  margin:0; font-size:22px; font-weight:800; letter-spacing:-0.01em;
+  margin:0; font-size:30px; font-weight:800; letter-spacing:-0.015em; line-height:1.15;
+}
+.brand h1 .brand-accent{
+  background:linear-gradient(92deg, var(--net) 0%, var(--existing) 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
 }
 .filter-group{display:flex; align-items:center; gap:8px;}
 .filter-group label{font-size:13px; color:var(--text-muted); font-weight:600; white-space:nowrap;}
@@ -86,6 +90,48 @@ select.filter-select{
   appearance:none; cursor:pointer; min-width:150px;
 }
 select.filter-select:hover{border-color:#8A8578;}
+
+/* ============ Searchable combobox (โครงการ) ============ */
+.combo{position:relative;}
+.combo-trigger{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  text-align:left; min-width:220px; max-width:260px;
+}
+.combo-trigger::after{
+  content:""; width:14px; height:14px; flex:none; margin-inline-start:6px;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235A564C' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>") no-repeat center / contain;
+}
+.combo-trigger span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.combo-trigger[aria-expanded="true"]{border-color:var(--net); box-shadow:0 0 0 3px var(--net-bg);}
+.combo-panel{
+  position:absolute; top:calc(100% + 8px); left:0; width:340px; max-width:80vw; z-index:80;
+  background:var(--surface); border:1.5px solid var(--border-strong); border-radius:14px;
+  box-shadow:var(--shadow-2); padding:10px; display:flex; flex-direction:column; gap:8px;
+}
+.combo-search{
+  display:flex; align-items:center; gap:8px; border:1.5px solid var(--border); border-radius:999px;
+  padding:8px 14px; color:var(--text-muted);
+}
+.combo-search input{
+  border:none; outline:none; font-family:inherit; font-size:15px; flex:1; background:transparent; color:var(--text);
+}
+.combo-list{max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:2px;}
+.combo-section-label{
+  font-size:11.5px; font-weight:800; color:var(--text-faint); letter-spacing:.04em;
+  padding:6px 10px 2px;
+}
+.combo-item{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 12px; border-radius:9px; cursor:pointer; font-size:14.5px; font-weight:600; color:var(--text);
+  border:none; background:none; width:100%; text-align:left;
+}
+.combo-item:hover, .combo-item.highlighted{background:var(--surface-2);}
+.combo-item.selected{background:var(--net-bg); color:var(--net); font-weight:800;}
+.combo-item .combo-count{
+  font-size:12px; font-weight:700; color:var(--text-faint); font-family:var(--font-num); white-space:nowrap;
+}
+.combo-item.selected .combo-count{color:var(--net);}
+.combo-empty{padding:16px 10px; text-align:center; color:var(--text-faint); font-size:13.5px;}
 .btn-reset{
   font-size:14px; font-weight:700; color:#C23464; background:#FCE4EC; border:1.5px solid #F2B9CD;
   padding:8px 16px; border-radius:999px; cursor:pointer; display:flex; align-items:center; gap:6px;
@@ -263,8 +309,8 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 <div class="topbar">
   <div class="topbar-inner">
     <div class="brand">
-      <span class="eyebrow">แดชบอร์ดเงินฝาก / เงินจอง / เงินล่วงหน้า</span>
-      <h1>ภาพรวมรายการเงินตามกลุ่มดำเนินงาน</h1>
+      <span class="eyebrow">ภาพรวมรายการเงินตามกลุ่มดำเนินงาน</span>
+      <h1><span class="brand-accent">Dashboard</span> เงินรับฝาก / เงินจอง / เงินล่วงหน้า</h1>
     </div>
     <div class="filter-group">
       <label for="f-kong">กอง</label>
@@ -275,8 +321,19 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       <select id="f-sckl" class="filter-select"></select>
     </div>
     <div class="filter-group">
-      <label for="f-proj">โครงการ</label>
-      <select id="f-proj" class="filter-select"></select>
+      <label for="proj-combo-trigger">โครงการ</label>
+      <div class="combo" id="proj-combo">
+        <button type="button" class="combo-trigger filter-select" id="proj-combo-trigger" aria-haspopup="listbox" aria-expanded="false">
+          <span id="proj-combo-label">ทุกโครงการ</span>
+        </button>
+        <div class="combo-panel" id="proj-combo-panel" hidden>
+          <div class="combo-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="proj-combo-search" placeholder="พิมพ์ชื่อโครงการ...">
+          </div>
+          <div class="combo-list" id="proj-combo-list" role="listbox"></div>
+        </div>
+      </div>
     </div>
     <button class="btn-reset" id="btn-reset" disabled>&#10005; ล้างตัวกรองทั้งหมด</button>
   </div>
@@ -433,9 +490,106 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       render();
     });
   }
+
+  // ---------- Searchable โครงการ combobox ----------
+  const PROJ_COUNTS = (() => {
+    const m = new Map();
+    ROWS.forEach(r => m.set(r.proj, (m.get(r.proj)||0) + 1));
+    return m;
+  })();
+  const PROJ_ALL = uniqueSorted(ROWS.map(r=>r.proj));
+  const PROJ_POPULAR = Array.from(PROJ_COUNTS.entries())
+    .sort((a,b)=>b[1]-a[1]).slice(0,8).map(e=>e[0]);
+
+  function syncProjComboLabel(){
+    const label = document.getElementById('proj-combo-label');
+    label.textContent = state.filters.proj === 'all' ? 'ทุกโครงการ' : state.filters.proj;
+  }
+
+  function setupProjCombo(){
+    const trigger = document.getElementById('proj-combo-trigger');
+    const panel = document.getElementById('proj-combo-panel');
+    const searchInput = document.getElementById('proj-combo-search');
+    const listEl = document.getElementById('proj-combo-list');
+    let highlightIdx = -1;
+
+    function currentOptions(query){
+      if (!query) return null; // signal: show "popular" view
+      const q = query.toLowerCase();
+      return PROJ_ALL.filter(p => p.toLowerCase().includes(q));
+    }
+
+    function renderList(){
+      const query = searchInput.value.trim();
+      const filtered = currentOptions(query);
+      let html = '';
+      html += `<button type="button" class="combo-item ${state.filters.proj==='all'?'selected':''}" data-val="all">
+        <span>ทุกโครงการ</span><span class="combo-count">${fmtInt(ROWS.length)}</span>
+      </button>`;
+      if (filtered === null){
+        html += `<div class="combo-section-label">โครงการยอดนิยม</div>`;
+        PROJ_POPULAR.forEach(p=>{
+          html += `<button type="button" class="combo-item ${state.filters.proj===p?'selected':''}" data-val="${encodeURIComponent(p)}">
+            <span>${p}</span><span class="combo-count">${fmtInt(PROJ_COUNTS.get(p))} ราย</span>
+          </button>`;
+        });
+      } else if (filtered.length === 0){
+        html += `<div class="combo-empty">ไม่พบโครงการที่ค้นหา</div>`;
+      } else {
+        html += `<div class="combo-section-label">ผลการค้นหา (${fmtInt(filtered.length)})</div>`;
+        filtered.forEach(p=>{
+          html += `<button type="button" class="combo-item ${state.filters.proj===p?'selected':''}" data-val="${encodeURIComponent(p)}">
+            <span>${p}</span><span class="combo-count">${fmtInt(PROJ_COUNTS.get(p))} ราย</span>
+          </button>`;
+        });
+      }
+      listEl.innerHTML = html;
+      highlightIdx = -1;
+      listEl.querySelectorAll('.combo-item').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const v = btn.getAttribute('data-val');
+          state.filters.proj = (v === 'all') ? 'all' : decodeURIComponent(v);
+          state.page = 1;
+          syncProjComboLabel();
+          closePanel();
+          render();
+        });
+      });
+    }
+
+    function openPanel(){
+      panel.hidden = false;
+      trigger.setAttribute('aria-expanded','true');
+      searchInput.value = '';
+      renderList();
+      setTimeout(()=>searchInput.focus(), 10);
+    }
+    function closePanel(){
+      panel.hidden = true;
+      trigger.setAttribute('aria-expanded','false');
+    }
+
+    trigger.addEventListener('click', ()=>{
+      if (panel.hidden) openPanel(); else closePanel();
+    });
+    searchInput.addEventListener('input', renderList);
+    searchInput.addEventListener('keydown', (e)=>{
+      const items = Array.from(listEl.querySelectorAll('.combo-item'));
+      if (e.key === 'ArrowDown'){ e.preventDefault(); highlightIdx = Math.min(items.length-1, highlightIdx+1); }
+      else if (e.key === 'ArrowUp'){ e.preventDefault(); highlightIdx = Math.max(0, highlightIdx-1); }
+      else if (e.key === 'Enter'){ e.preventDefault(); if (items[highlightIdx]) items[highlightIdx].click(); return; }
+      else if (e.key === 'Escape'){ closePanel(); return; }
+      else return;
+      items.forEach((it,i)=>it.classList.toggle('highlighted', i===highlightIdx));
+      if (items[highlightIdx]) items[highlightIdx].scrollIntoView({block:'nearest'});
+    });
+    document.addEventListener('click', (e)=>{
+      if (!panel.hidden && !document.getElementById('proj-combo').contains(e.target)) closePanel();
+    });
+  }
   populateSelect('f-kong','kong','ทุกกอง');
   populateSelect('f-sckl','sckl','ทุกสคจ./สคล.');
-  populateSelect('f-proj','proj','ทุกโครงการ');
+  setupProjCombo();
 
   function matchesAllExcept(row, exceptKey){
     for (const k of ['kong','sckl','proj','gl','group']){
@@ -474,10 +628,11 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     document.getElementById('btn-reset').disabled = active.length === 0;
   }
   function syncSelectsFromState(){
-    ['kong','sckl','proj'].forEach(k=>{
+    ['kong','sckl'].forEach(k=>{
       const sel = document.getElementById('f-'+k);
       sel.value = state.filters[k] === 'all' ? 'all' : encodeURIComponent(state.filters[k]);
     });
+    syncProjComboLabel();
   }
   document.getElementById('btn-reset').addEventListener('click', ()=>{
     state.filters = { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all' };
