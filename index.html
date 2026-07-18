@@ -866,14 +866,16 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     types.forEach(t=>{
       const sub = rows.filter(r=>r.type===t);
       const count = sub.length;
-      const diff = sub.reduce((s,r)=>s+r.diff,0);
+      // ส่วนต่างมีความหมายเฉพาะกลุ่ม "รายเดิม" เท่านั้น - รายใหม่/Clear ที่มี
+      // ตัวเลขตกค้างในไฟล์ต้นฉบับ (จากตอนที่ยังไม่ถูกจัดกลุ่ม) ไม่ควรถูกนับ
+      const diff = (t === 'รายเดิม') ? sub.reduce((s,r)=>s+r.diff,0) : 0;
       const net = sub.reduce((s,r)=>s+r.net,0);
       totalCount+=count; totalDiff+=diff; totalNet+=net;
       const pillClass = t==='รายเดิม'?'type-existing':(t==='รายใหม่'?'type-new':'type-clear');
       html += `<tr>
         <td><span class="type-pill ${pillClass}">${t}</span></td>
         <td class="num">${fmtInt(count)}</td>
-        <td class="num">${fmtMoneySigned(diff)}</td>
+        <td class="num">${t==='รายเดิม' ? fmtMoneySigned(diff) : '<span style="color:var(--text-faint);">–</span>'}</td>
         <td class="num">${fmtMoney(net)}</td>
       </tr>`;
     });
@@ -911,8 +913,13 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       );
     }
     const {sortKey, sortDir} = state;
+    // ส่วนต่างมีความหมายเฉพาะ "รายเดิม" - ตอนเรียงลำดับคอลัมน์นี้ ต้องใช้ค่า
+    // effective (0 สำหรับรายใหม่/Clear) ไม่งั้นลำดับจะไม่ตรงกับที่ตารางโชว์ "–"
+    const effDiff = r => r.type === 'รายเดิม' ? r.diff : 0;
     rows = rows.slice().sort((a,b)=>{
-      let av=a[sortKey], bv=b[sortKey];
+      let av, bv;
+      if (sortKey === 'diff'){ av = effDiff(a); bv = effDiff(b); }
+      else { av = a[sortKey]; bv = b[sortKey]; }
       if (typeof av === 'string') return av.localeCompare(bv,'th') * sortDir;
       return (av-bv) * sortDir;
     });
@@ -926,7 +933,13 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     const startIdx = (state.page-1)*state.pageSize;
     const pageRows = rows.slice(startIdx, startIdx+state.pageSize);
 
-    document.getElementById('detail-tbody').innerHTML = pageRows.map(r=>`
+    document.getElementById('detail-tbody').innerHTML = pageRows.map(r=>{
+      // ส่วนต่างมีความหมายเฉพาะ "รายเดิม" - รายใหม่/Clear มีค่าตกค้างจากไฟล์
+      // ต้นฉบับ (ก่อนถูกจัดกลุ่ม) จึงไม่ควรแสดงเป็นตัวเลขที่ทำให้เข้าใจผิด
+      const isExisting = r.type === 'รายเดิม';
+      const chgCell = isExisting ? chgPill(r.chg) : '<span style="color:var(--text-faint);">–</span>';
+      const diffCell = isExisting ? fmtMoneySigned(r.diff) : '<span style="color:var(--text-faint);">–</span>';
+      return `
       <tr>
         <td>${r.gl}</td>
         <td>${typePill(r.type)}</td>
@@ -935,11 +948,11 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         <td>${r.proj}</td>
         <td>${r.group}</td>
         <td class="detail-cell">${r.detail}</td>
-        <td>${chgPill(r.chg)}</td>
-        <td class="num">${fmtMoneySigned(r.diff)}</td>
+        <td>${chgCell}</td>
+        <td class="num">${diffCell}</td>
         <td class="num">${fmtMoney(r.net)}</td>
       </tr>
-    `).join('');
+    `;}).join('');
 
     document.getElementById('detail-hint').textContent = 'พบ ' + fmtInt(rows.length) + ' รายการ';
     document.getElementById('page-info').textContent =
@@ -1000,7 +1013,10 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     const aoa = [[
       'ชื่อ GL','ประเภทรายการ','กอง','สคจ./สคล.','โครงการ','กลุ่มการดำเนินงาน','รายละเอียดดำเนินงาน','ส่วนต่าง','จำนวนเงินส่วนต่าง','จำนวนเงินสุทธิ'
     ]];
-    rows.forEach(r=>aoa.push([r.gl,r.type,r.kong,r.sckl,r.proj,r.group,r.detail,r.chg,r.diff,r.net]));
+    rows.forEach(r=>{
+      const isExisting = r.type === 'รายเดิม';
+      aoa.push([r.gl,r.type,r.kong,r.sckl,r.proj,r.group,r.detail, isExisting?r.chg:'-', isExisting?r.diff:0, r.net]);
+    });
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = [{wch:22},{wch:10},{wch:8},{wch:20},{wch:24},{wch:26},{wch:40},{wch:10},{wch:16},{wch:16}];
     const wb = XLSX.utils.book_new();
