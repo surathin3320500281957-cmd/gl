@@ -204,17 +204,30 @@ section{margin-bottom:40px;}
 .card-amount small{font-size:15px; font-weight:600; color:var(--text-muted); margin-inline-start:4px;}
 .card-count{margin-top:8px; font-size:14px; color:var(--text-muted); font-weight:600;}
 .card-count b{color:var(--text); font-family:var(--font-num); font-weight:700;}
-.card-diff{
-  margin-top:14px; padding-top:14px; border-top:1px dashed var(--border);
-  display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700;
-}
-.card-diff .diff-amt{font-family:var(--font-num); font-variant-numeric:tabular-nums;}
 .trend-badge{
   display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; font-size:12.5px; font-weight:800;
 }
 .trend-up{background:#FCE4E8; color:var(--up);}
 .trend-down{background:#DFF6EF; color:var(--down);}
 .trend-flat{background:#F3E9EF; color:var(--flat);}
+
+.card-breakdown{
+  margin-top:14px; padding-top:12px; border-top:1px dashed var(--border);
+  display:flex; flex-direction:column; gap:6px;
+}
+.breakdown-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
+  padding:8px 10px; border-radius:9px; cursor:pointer; font-family:inherit;
+  border:1.5px solid transparent; background:none; transition:background .12s, border-color .12s;
+}
+.breakdown-row:hover{background:var(--surface-2);}
+.breakdown-row.active{border-color:var(--existing); background:var(--existing-bg);}
+.breakdown-left{display:flex; align-items:center;}
+.breakdown-right{
+  display:flex; align-items:center; gap:10px; font-family:var(--font-num); font-size:13px; font-weight:700;
+  color:var(--text); font-variant-numeric:tabular-nums;
+}
+.breakdown-right .bcount{color:var(--text-muted); font-weight:600; font-size:12px;}
 
 /* ============ Charts ============ */
 .chart-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
@@ -483,7 +496,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 
   // ---------- State ----------
   const state = {
-    filters: { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all', card:'all' },
+    filters: { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all', card:'all', chg:'all' },
     search: '',
     page: 1,
     pageSize: 50,
@@ -621,27 +634,35 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     return row.type === value; // 'รายเดิม' | 'รายใหม่' | 'Clear'
   }
 
-  function matchesAllExcept(row, exceptKey){
-    for (const k of ['kong','sckl','proj','gl','group','card']){
-      if (k === exceptKey) continue;
+  function matchesFilters(row, excludeKeys){
+    for (const k of ['kong','sckl','proj','gl','group','card','chg']){
+      if (excludeKeys.includes(k)) continue;
       const fv = state.filters[k];
       if (fv === 'all') continue;
       if (k === 'card'){ if (!cardMatches(row, fv)) return false; }
+      else if (k === 'chg'){ if (row.chg !== fv) return false; }
       else if (row[k] !== fv) return false;
     }
     return true;
   }
 
-  function rowsExcluding(exceptKey){
-    return ROWS.filter(r => matchesAllExcept(r, exceptKey));
+  function rowsExcluding(...excludeKeys){
+    return ROWS.filter(r => matchesFilters(r, excludeKeys));
   }
 
   function filteredRows(){
-    return rowsExcluding(null);
+    return rowsExcluding();
+  }
+
+  // เมื่อสลับการ์ดหลักออกจาก "รายเดิม" ตัวกรองส่วนต่าง (chg) จะไม่มีความหมาย
+  // อีกต่อไป จึงต้องล้างให้อัตโนมัติเสมอ กัน filter ค้างแบบงงๆ
+  function setCardFilter(val){
+    state.filters.card = val;
+    if (val !== 'รายเดิม') state.filters.chg = 'all';
   }
 
   // ---------- Chips / Reset ----------
-  const FILTER_LABELS = { kong:'กอง', sckl:'สคจ./สคล.', proj:'โครงการ', gl:'GL', group:'กลุ่มการดำเนินงาน', card:'กลุ่ม' };
+  const FILTER_LABELS = { kong:'กอง', sckl:'สคจ./สคล.', proj:'โครงการ', gl:'GL', group:'กลุ่มการดำเนินงาน', card:'กลุ่ม', chg:'ส่วนต่าง (รายเดิม)' };
   const CARD_CHIP_TEXT = { 'net':'ยอดรวมสุทธิ (รายเดิม+รายใหม่)', 'รายเดิม':'รายเดิม', 'รายใหม่':'รายใหม่', 'Clear':'Clear' };
   function renderChips(){
     const wrap = document.getElementById('chips-row');
@@ -668,7 +689,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     syncProjComboLabel();
   }
   document.getElementById('btn-reset').addEventListener('click', ()=>{
-    state.filters = { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all', card:'all' };
+    state.filters = { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all', card:'all', chg:'all' };
     syncSelectsFromState();
     state.page = 1;
     render();
@@ -678,7 +699,9 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   function renderCards(){
     // Cards must NOT filter themselves out - same cross-filter pattern as the
     // ranking charts - so all 4 numbers stay comparable no matter which is active.
-    const rows = rowsExcluding('card');
+    // Also exclude 'chg' here so the outer 4 totals never shrink because of the
+    // ส่วนต่าง breakdown filter (which only makes sense inside "รายเดิม").
+    const rows = rowsExcluding('card', 'chg');
     const byType = { 'รายเดิม':[], 'รายใหม่':[], 'Clear':[] };
     rows.forEach(r => { if(byType[r.type]) byType[r.type].push(r); });
 
@@ -699,44 +722,81 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     const clearAmt = sumNet(byType['Clear']);
     const clearCount = byType['Clear'].length;
 
-    function diffBadge(v){
-      if (v > 0) return '<span class="trend-badge trend-up">&#9650; เพิ่มขึ้น</span>';
-      if (v < 0) return '<span class="trend-badge trend-down">&#9660; ลดลง</span>';
-      return '<span class="trend-badge trend-flat">&#9679; เท่าเดิม</span>';
-    }
+    // เพิ่มขึ้น / ลดลง / เท่าเดิม breakdown - เฉพาะกลุ่มรายเดิมเท่านั้น
+    const chgBuckets = { 'เพิ่มขึ้น':[], 'ลดลง':[], 'เท่าเดิม':[] };
+    byType['รายเดิม'].forEach(r => { if (chgBuckets[r.chg]) chgBuckets[r.chg].push(r); });
+    const chgMeta = [
+      {key:'เพิ่มขึ้น', icon:'&#9650;', cls:'trend-up'},
+      {key:'ลดลง',     icon:'&#9660;', cls:'trend-down'},
+      {key:'เท่าเดิม', icon:'&#9679;', cls:'trend-flat'},
+    ];
+    const activeChg = state.filters.chg;
+    const chgRowsHtml = chgMeta.map(m=>{
+      const arr = chgBuckets[m.key];
+      const count = arr.length;
+      const diffSum = sumDiff(arr);
+      const active = (state.filters.card === 'รายเดิม' && activeChg === m.key) ? 'active' : '';
+      return `
+        <button type="button" class="breakdown-row ${active}" data-chg="${encodeURIComponent(m.key)}">
+          <span class="breakdown-left"><span class="trend-badge ${m.cls}">${m.icon} ${m.key}</span></span>
+          <span class="breakdown-right"><span class="bcount">${fmtInt(count)} ราย</span><span>${fmtMoneySigned(diffSum)} บาท</span></span>
+        </button>`;
+    }).join('');
 
     const activeCard = state.filters.card;
     const isActive = v => activeCard === v ? 'active' : '';
 
     const cardsHtml = `
-      <button type="button" class="card c-net ${isActive('net')}" data-card="net">
+      <div class="card c-net ${isActive('net')}" data-card="net" role="button" tabindex="0">
         <div class="card-label"><span class="dot"></span>ยอดรวมสุทธิ (รายเดิม + รายใหม่)</div>
         <div class="card-amount">${fmtMoney(netTotalAmt)}<small>บาท</small></div>
         <div class="card-count">จำนวน <b>${fmtInt(netTotalCount)}</b> รายการ</div>
-      </button>
-      <button type="button" class="card c-existing ${isActive('รายเดิม')}" data-card="${encodeURIComponent('รายเดิม')}">
+      </div>
+      <div class="card c-existing ${isActive('รายเดิม')}" data-card="${encodeURIComponent('รายเดิม')}" role="button" tabindex="0">
         <div class="card-label"><span class="dot"></span>รายเดิม</div>
         <div class="card-amount">${fmtMoney(existingAmt)}<small>บาท</small></div>
-        <div class="card-count">จำนวน <b>${fmtInt(existingCount)}</b> รายการ</div>
-        <div class="card-diff">${diffBadge(existingDiff)}<span class="diff-amt">${fmtMoneySigned(existingDiff)} บาท</span></div>
-      </button>
-      <button type="button" class="card c-new ${isActive('รายใหม่')}" data-card="${encodeURIComponent('รายใหม่')}">
+        <div class="card-count">จำนวน <b>${fmtInt(existingCount)}</b> รายการ &middot; ส่วนต่างรวม ${fmtMoneySigned(existingDiff)} บาท</div>
+        <div class="card-breakdown">${chgRowsHtml}</div>
+      </div>
+      <div class="card c-new ${isActive('รายใหม่')}" data-card="${encodeURIComponent('รายใหม่')}" role="button" tabindex="0">
         <div class="card-label"><span class="dot"></span>รายใหม่</div>
         <div class="card-amount">${fmtMoney(newAmt)}<small>บาท</small></div>
         <div class="card-count">จำนวน <b>${fmtInt(newCount)}</b> รายการ</div>
-      </button>
-      <button type="button" class="card c-clear ${isActive('Clear')}" data-card="${encodeURIComponent('Clear')}">
+      </div>
+      <div class="card c-clear ${isActive('Clear')}" data-card="${encodeURIComponent('Clear')}" role="button" tabindex="0">
         <div class="card-label"><span class="dot"></span>Clear</div>
         <div class="card-amount">${fmtMoney(clearAmt)}<small>บาท</small></div>
         <div class="card-count">จำนวน <b>${fmtInt(clearCount)}</b> รายการ</div>
-      </button>
+      </div>
     `;
     const cardsEl = document.getElementById('cards');
     cardsEl.innerHTML = cardsHtml;
-    cardsEl.querySelectorAll('.card').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const val = decodeURIComponent(btn.getAttribute('data-card'));
-        state.filters.card = (state.filters.card === val) ? 'all' : val;
+
+    function activateCard(val){
+      setCardFilter(state.filters.card === val ? 'all' : val);
+      state.page = 1;
+      render();
+    }
+    cardsEl.querySelectorAll(':scope > .card').forEach(el=>{
+      const val = decodeURIComponent(el.getAttribute('data-card'));
+      el.addEventListener('click', ()=> activateCard(val));
+      el.addEventListener('keydown', (e)=>{
+        if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activateCard(val); }
+      });
+    });
+    // แถวย่อยส่วนต่าง (อยู่ในการ์ดรายเดิม) - ต้อง stopPropagation กันไม่ให้ไป
+    // ทริกเกอร์คลิกของการ์ดแม่ซ้ำ และต้องตั้ง card='รายเดิม' คู่กับ chg เสมอ
+    cardsEl.querySelectorAll('.breakdown-row').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const val = decodeURIComponent(btn.getAttribute('data-chg'));
+        const already = state.filters.card === 'รายเดิม' && state.filters.chg === val;
+        if (already){
+          state.filters.chg = 'all';
+        } else {
+          state.filters.card = 'รายเดิม';
+          state.filters.chg = val;
+        }
         state.page = 1;
         render();
       });
