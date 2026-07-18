@@ -173,6 +173,16 @@ section{margin-bottom:40px;}
 .card{
   background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
   padding:22px 22px 20px; box-shadow:var(--shadow-1); position:relative; overflow:hidden;
+  font-family:inherit; text-align:left; width:100%; cursor:pointer;
+  transition:box-shadow .15s, transform .15s, border-color .15s;
+}
+.card:hover{box-shadow:var(--shadow-2); transform:translateY(-2px);}
+.card.active{
+  border-color:var(--text); box-shadow:0 0 0 3px var(--net-bg), var(--shadow-2);
+}
+.card.active::after{
+  content:"\2713 กำลังกรอง"; position:absolute; top:14px; right:16px; font-size:11.5px; font-weight:800;
+  color:var(--net); background:var(--net-bg); padding:3px 9px; border-radius:999px;
 }
 .card::before{
   content:""; position:absolute; left:0; top:0; bottom:0; width:6px;
@@ -350,7 +360,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   <section id="sec-cards">
     <div class="section-head">
       <h2>ภาพรวม</h2>
-      <span class="hint" id="cards-hint">แสดงผลตามตัวกรองปัจจุบัน</span>
+      <span class="hint" id="cards-hint">คลิกการ์ดเพื่อกรองข้อมูลทั้งหน้า &middot; คลิกซ้ำเพื่อยกเลิก</span>
     </div>
     <div class="cards" id="cards"></div>
   </section>
@@ -473,7 +483,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 
   // ---------- State ----------
   const state = {
-    filters: { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all' },
+    filters: { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all', card:'all' },
     search: '',
     page: 1,
     pageSize: 50,
@@ -602,11 +612,22 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   populateSelect('f-sckl','sckl','ทุกสคจ./สคล.');
   setupProjCombo();
 
+  const CARD_MATCHERS = {
+    'all': () => true,
+    'net': row => row.type === 'รายเดิม' || row.type === 'รายใหม่',
+  };
+  function cardMatches(row, value){
+    if (CARD_MATCHERS[value]) return CARD_MATCHERS[value](row);
+    return row.type === value; // 'รายเดิม' | 'รายใหม่' | 'Clear'
+  }
+
   function matchesAllExcept(row, exceptKey){
-    for (const k of ['kong','sckl','proj','gl','group']){
+    for (const k of ['kong','sckl','proj','gl','group','card']){
       if (k === exceptKey) continue;
       const fv = state.filters[k];
-      if (fv !== 'all' && row[k] !== fv) return false;
+      if (fv === 'all') continue;
+      if (k === 'card'){ if (!cardMatches(row, fv)) return false; }
+      else if (row[k] !== fv) return false;
     }
     return true;
   }
@@ -620,12 +641,13 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   }
 
   // ---------- Chips / Reset ----------
-  const FILTER_LABELS = { kong:'กอง', sckl:'สคจ./สคล.', proj:'โครงการ', gl:'GL', group:'กลุ่มการดำเนินงาน' };
+  const FILTER_LABELS = { kong:'กอง', sckl:'สคจ./สคล.', proj:'โครงการ', gl:'GL', group:'กลุ่มการดำเนินงาน', card:'กลุ่ม' };
+  const CARD_CHIP_TEXT = { 'net':'ยอดรวมสุทธิ (รายเดิม+รายใหม่)', 'รายเดิม':'รายเดิม', 'รายใหม่':'รายใหม่', 'Clear':'Clear' };
   function renderChips(){
     const wrap = document.getElementById('chips-row');
     const active = Object.entries(state.filters).filter(([k,v]) => v !== 'all');
     wrap.innerHTML = active.map(([k,v]) =>
-      '<span class="chip">'+FILTER_LABELS[k]+': '+v+'<button data-clear="'+k+'" aria-label="ล้างตัวกรอง '+FILTER_LABELS[k]+'">&#10005;</button></span>'
+      '<span class="chip">'+FILTER_LABELS[k]+': '+(k==='card'?CARD_CHIP_TEXT[v]:v)+'<button data-clear="'+k+'" aria-label="ล้างตัวกรอง '+FILTER_LABELS[k]+'">&#10005;</button></span>'
     ).join('');
     wrap.querySelectorAll('button[data-clear]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -646,7 +668,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     syncProjComboLabel();
   }
   document.getElementById('btn-reset').addEventListener('click', ()=>{
-    state.filters = { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all' };
+    state.filters = { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all', card:'all' };
     syncSelectsFromState();
     state.page = 1;
     render();
@@ -654,7 +676,9 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 
   // ---------- Cards ----------
   function renderCards(){
-    const rows = filteredRows();
+    // Cards must NOT filter themselves out - same cross-filter pattern as the
+    // ranking charts - so all 4 numbers stay comparable no matter which is active.
+    const rows = rowsExcluding('card');
     const byType = { 'รายเดิม':[], 'รายใหม่':[], 'Clear':[] };
     rows.forEach(r => { if(byType[r.type]) byType[r.type].push(r); });
 
@@ -681,35 +705,47 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       return '<span class="trend-badge trend-flat">&#9679; เท่าเดิม</span>';
     }
 
+    const activeCard = state.filters.card;
+    const isActive = v => activeCard === v ? 'active' : '';
+
     const cardsHtml = `
-      <div class="card c-net">
+      <button type="button" class="card c-net ${isActive('net')}" data-card="net">
         <div class="card-label"><span class="dot"></span>ยอดรวมสุทธิ (รายเดิม + รายใหม่)</div>
         <div class="card-amount">${fmtMoney(netTotalAmt)}<small>บาท</small></div>
         <div class="card-count">จำนวน <b>${fmtInt(netTotalCount)}</b> รายการ</div>
-      </div>
-      <div class="card c-existing">
+      </button>
+      <button type="button" class="card c-existing ${isActive('รายเดิม')}" data-card="${encodeURIComponent('รายเดิม')}">
         <div class="card-label"><span class="dot"></span>รายเดิม</div>
         <div class="card-amount">${fmtMoney(existingAmt)}<small>บาท</small></div>
         <div class="card-count">จำนวน <b>${fmtInt(existingCount)}</b> รายการ</div>
         <div class="card-diff">${diffBadge(existingDiff)}<span class="diff-amt">${fmtMoneySigned(existingDiff)} บาท</span></div>
-      </div>
-      <div class="card c-new">
+      </button>
+      <button type="button" class="card c-new ${isActive('รายใหม่')}" data-card="${encodeURIComponent('รายใหม่')}">
         <div class="card-label"><span class="dot"></span>รายใหม่</div>
         <div class="card-amount">${fmtMoney(newAmt)}<small>บาท</small></div>
         <div class="card-count">จำนวน <b>${fmtInt(newCount)}</b> รายการ</div>
-      </div>
-      <div class="card c-clear">
+      </button>
+      <button type="button" class="card c-clear ${isActive('Clear')}" data-card="${encodeURIComponent('Clear')}">
         <div class="card-label"><span class="dot"></span>Clear</div>
         <div class="card-amount">${fmtMoney(clearAmt)}<small>บาท</small></div>
         <div class="card-count">จำนวน <b>${fmtInt(clearCount)}</b> รายการ</div>
-      </div>
+      </button>
     `;
-    document.getElementById('cards').innerHTML = cardsHtml;
+    const cardsEl = document.getElementById('cards');
+    cardsEl.innerHTML = cardsHtml;
+    cardsEl.querySelectorAll('.card').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const val = decodeURIComponent(btn.getAttribute('data-card'));
+        state.filters.card = (state.filters.card === val) ? 'all' : val;
+        state.page = 1;
+        render();
+      });
+    });
 
     const activeCount = Object.values(state.filters).filter(v=>v!=='all').length;
     document.getElementById('cards-hint').textContent = activeCount === 0
-      ? 'แสดงข้อมูลทั้งหมด'
-      : 'กรองอยู่ ' + activeCount + ' เงื่อนไข';
+      ? 'คลิกการ์ดเพื่อกรองข้อมูลทั้งหน้า · คลิกซ้ำเพื่อยกเลิก'
+      : 'คลิกการ์ดเพื่อกรองข้อมูลทั้งหน้า · กรองอยู่ ' + activeCount + ' เงื่อนไข';
   }
 
   // ---------- Charts ----------
