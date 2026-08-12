@@ -286,8 +286,10 @@ section{margin-bottom:40px;}
   color:var(--text);
 }
 .btn-export:hover{background:var(--surface-2); border-color:var(--text-muted);}
-.btn-export.primary{background:var(--net); color:#fff; border-color:var(--net);}
-.btn-export.primary:hover{background:#000;}
+.btn-export.excel{background:#1D6F42; color:#fff; border-color:#1D6F42;}
+.btn-export.excel:hover{background:#155230;}
+.btn-export.pdf{background:#DC2626; color:#fff; border-color:#DC2626;}
+.btn-export.pdf:hover{background:#B91C1C;}
 
 .table-wrap{
   background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
@@ -431,11 +433,11 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         <input id="search-input" type="text" placeholder="ค้นหา GL, โครงการ, สาขา, รายละเอียด...">
       </div>
-      <button class="btn-export" id="btn-export-excel">
+      <button class="btn-export excel" id="btn-export-excel">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 20h16"/></svg>
         Export Excel
       </button>
-      <button class="btn-export primary" id="btn-export-pdf">
+      <button class="btn-export pdf" id="btn-export-pdf">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M6 9V3h9l3 3v13a1 1 0 01-1 1H6a1 1 0 01-1-1V9z"/><path d="M9 13h6M9 17h4"/></svg>
         Export PDF (พิมพ์)
       </button>
@@ -1024,9 +1026,69 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     XLSX.writeFile(wb, 'สรุปรายการ_เงินมัดจำ_เงินจอง.xlsx');
   });
 
-  document.getElementById('btn-export-pdf').addEventListener('click', ()=>{
-    window.print();
-  });
+  function exPDF(){
+    const rows = getSearchedRows();
+    const title = 'สรุปรายการ เงินมัดจำ เงินจอง';
+    const theadHtml = document.querySelector('#detail-table thead').outerHTML
+      .replace(/<span class="sort-arrow">.*?<\/span>/g, '');
+    const bodyRows = rows.map(r=>{
+      const isExisting = r.type === 'รายเดิม';
+      const chgCell = isExisting ? chgPill(r.chg) : '<span style="color:#999;">–</span>';
+      const diffCell = isExisting ? fmtMoneySigned(r.diff) : '<span style="color:#999;">–</span>';
+      return `
+      <tr>
+        <td>${r.gl}</td>
+        <td>${typePill(r.type)}</td>
+        <td>${r.kong}</td>
+        <td>${r.sckl}</td>
+        <td>${r.proj}</td>
+        <td>${r.group}</td>
+        <td class="detail-cell">${r.detail}</td>
+        <td>${chgCell}</td>
+        <td class="num">${diffCell}</td>
+        <td class="num">${fmtMoney(r.net)}</td>
+      </tr>`;
+    }).join('');
+    const now = new Date().toLocaleString('th-TH');
+    const html = `<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8">
+<title>${title}</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Sarabun','Segoe UI',sans-serif; margin:0; padding:0; color:#1a1a1a; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .meta { font-size:12px; color:#666; margin-bottom:14px; }
+  table { width:100%; border-collapse:collapse; font-size:11px; }
+  thead th { background:#7048B8; color:#fff; text-align:left; padding:6px 8px; font-weight:700; white-space:nowrap; }
+  tbody td { padding:6px 8px; border-bottom:1px solid #e5e5e5; vertical-align:top; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  td.detail-cell { white-space:pre-wrap; max-width:280px; line-height:1.4; }
+  .type-pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:800; }
+  .type-existing{ background:#F1E9FB; color:#7048B8; }
+  .type-new{ background:#DFF6EF; color:#0F9D6C; }
+  .type-clear{ background:#F3E9EF; color:#B0468C; }
+  .chg-pill{ display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:800; padding:2px 7px; border-radius:999px; }
+  tr { break-inside: avoid; }
+  thead { display: table-header-group; }
+</style></head>
+<body>
+  <h1>${title}</h1>
+  <div class="meta">พิมพ์เมื่อ ${now} &middot; ทั้งหมด ${rows.length.toLocaleString('th-TH')} รายการ</div>
+  <table>
+    ${theadHtml.replace('<thead>','').replace('</thead>','')}
+    <tbody>${bodyRows}</tbody>
+  </table>
+  <script>
+    window.onload = function(){ setTimeout(function(){ window.print(); }, 400); };
+  <\/script>
+</body></html>`;
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  }
+
+  document.getElementById('btn-export-pdf').addEventListener('click', exPDF);
 
   // ---------- Render all ----------
   function render(){
