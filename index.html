@@ -447,6 +447,10 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         <thead>
           <tr>
             <th data-key="gl">ชื่อ GL <span class="sort-arrow"></span></th>
+            <th>เดือน(เก่า)</th>
+            <th class="num">จำนวนเงิน(เก่า)</th>
+            <th>เดือน(ใหม่)</th>
+            <th class="num">จำนวนเงิน(ใหม่)</th>
             <th data-key="type">ประเภทรายการ <span class="sort-arrow"></span></th>
             <th data-key="kong">กอง <span class="sort-arrow"></span></th>
             <th data-key="sckl">สคจ./สคล. <span class="sort-arrow"></span></th>
@@ -941,9 +945,29 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       const isExisting = r.type === 'รายเดิม';
       const chgCell = isExisting ? chgPill(r.chg) : '<span style="color:var(--text-faint);">–</span>';
       const diffCell = isExisting ? fmtMoneySigned(r.diff) : '<span style="color:var(--text-faint);">–</span>';
+
+      // เดือน/จำนวนเงิน (เก่า-ใหม่): จำนวนเงิน(ใหม่) = จำนวนเงินสุทธิ ตรงๆ,
+      // จำนวนเงิน(เก่า) = สุทธิ - ส่วนต่าง (ย้อนกลับไปหาค่าก่อนมีการเปลี่ยนแปลง)
+      // ใช้ effective diff (รายเดิม ใช้ diff จริง, รายใหม่/Clear ถือเป็น 0
+      // เพราะค่าที่ตกค้างในไฟล์ไม่มีความหมาย)
+      const effDiff = isExisting ? r.diff : 0;
+      const oldAmount = r.net - effDiff;
+      const newAmount = r.net;
+      const dash = '<span style="color:var(--text-faint);">–</span>';
+      const showOld = r.type === 'รายเดิม' || r.type === 'Clear';
+      const showNew = r.type === 'รายเดิม' || r.type === 'รายใหม่';
+      const oldMonthCell = showOld ? 'เดือนเก่า' : dash;
+      const oldAmountCell = showOld ? fmtMoney(oldAmount) : dash;
+      const newMonthCell = showNew ? 'เดือนใหม่' : dash;
+      const newAmountCell = showNew ? fmtMoney(newAmount) : dash;
+
       return `
       <tr>
         <td>${r.gl}</td>
+        <td>${oldMonthCell}</td>
+        <td class="num">${oldAmountCell}</td>
+        <td>${newMonthCell}</td>
+        <td class="num">${newAmountCell}</td>
         <td>${typePill(r.type)}</td>
         <td>${r.kong}</td>
         <td>${r.sckl}</td>
@@ -1013,14 +1037,25 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   document.getElementById('btn-export-excel').addEventListener('click', ()=>{
     const rows = getSearchedRows();
     const aoa = [[
-      'ชื่อ GL','ประเภทรายการ','กอง','สคจ./สคล.','โครงการ','กลุ่มการดำเนินงาน','รายละเอียดดำเนินงาน','ส่วนต่าง','จำนวนเงินส่วนต่าง','จำนวนเงินสุทธิ'
+      'ชื่อ GL','เดือน(เก่า)','จำนวนเงิน(เก่า)','เดือน(ใหม่)','จำนวนเงิน(ใหม่)','ประเภทรายการ','กอง','สคจ./สคล.','โครงการ','กลุ่มการดำเนินงาน','รายละเอียดดำเนินงาน','ส่วนต่าง','จำนวนเงินส่วนต่าง','จำนวนเงินสุทธิ'
     ]];
     rows.forEach(r=>{
       const isExisting = r.type === 'รายเดิม';
-      aoa.push([r.gl,r.type,r.kong,r.sckl,r.proj,r.group,r.detail, isExisting?r.chg:'-', isExisting?r.diff:0, r.net]);
+      const effDiff = isExisting ? r.diff : 0;
+      const oldAmount = r.net - effDiff;
+      const newAmount = r.net;
+      const showOld = r.type === 'รายเดิม' || r.type === 'Clear';
+      const showNew = r.type === 'รายเดิม' || r.type === 'รายใหม่';
+      aoa.push([
+        r.gl,
+        showOld ? 'เดือนเก่า' : '-', showOld ? oldAmount : 0,
+        showNew ? 'เดือนใหม่' : '-', showNew ? newAmount : 0,
+        r.type,r.kong,r.sckl,r.proj,r.group,r.detail,
+        isExisting?r.chg:'-', isExisting?r.diff:0, r.net
+      ]);
     });
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{wch:22},{wch:10},{wch:8},{wch:20},{wch:24},{wch:26},{wch:40},{wch:10},{wch:16},{wch:16}];
+    ws['!cols'] = [{wch:22},{wch:12},{wch:16},{wch:12},{wch:16},{wch:10},{wch:8},{wch:20},{wch:24},{wch:26},{wch:40},{wch:10},{wch:16},{wch:16}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'รายละเอียด');
     XLSX.writeFile(wb, 'สรุปรายการ_เงินมัดจำ_เงินจอง.xlsx');
@@ -1035,9 +1070,19 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       const isExisting = r.type === 'รายเดิม';
       const chgCell = isExisting ? chgPill(r.chg) : '<span style="color:#999;">–</span>';
       const diffCell = isExisting ? fmtMoneySigned(r.diff) : '<span style="color:#999;">–</span>';
+      const effDiff = isExisting ? r.diff : 0;
+      const oldAmount = r.net - effDiff;
+      const newAmount = r.net;
+      const dash = '<span style="color:#999;">–</span>';
+      const showOld = r.type === 'รายเดิม' || r.type === 'Clear';
+      const showNew = r.type === 'รายเดิม' || r.type === 'รายใหม่';
       return `
       <tr>
         <td>${r.gl}</td>
+        <td>${showOld ? 'เดือนเก่า' : dash}</td>
+        <td class="num">${showOld ? fmtMoney(oldAmount) : dash}</td>
+        <td>${showNew ? 'เดือนใหม่' : dash}</td>
+        <td class="num">${showNew ? fmtMoney(newAmount) : dash}</td>
         <td>${typePill(r.type)}</td>
         <td>${r.kong}</td>
         <td>${r.sckl}</td>
