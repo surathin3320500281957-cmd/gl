@@ -365,6 +365,14 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         </div>
       </div>
     </div>
+    <div class="filter-group">
+      <label for="f-period">เดือน</label>
+      <select id="f-period" class="filter-select">
+        <option value="all">ทุกเดือน</option>
+        <option value="old">เดือนเก่า</option>
+        <option value="new">เดือนใหม่</option>
+      </select>
+    </div>
     <button class="btn-reset" id="btn-reset" disabled>&#10005; ล้างตัวกรองทั้งหมด</button>
   </div>
   <div class="chips-row" id="chips-row"></div>
@@ -502,7 +510,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 
   // ---------- State ----------
   const state = {
-    filters: { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all', card:'all', chg:'all' },
+    filters: { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all', card:'all', chg:'all', period:'all' },
     search: '',
     page: 1,
     pageSize: 50,
@@ -629,6 +637,11 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   }
   populateSelect('f-kong','kong','ทุกกอง');
   populateSelect('f-sckl','sckl','ทุกสคจ./สคล.');
+  document.getElementById('f-period').addEventListener('change', (e)=>{
+    state.filters.period = e.target.value;
+    state.page = 1;
+    render();
+  });
   setupProjCombo();
 
   const CARD_MATCHERS = {
@@ -639,14 +652,22 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     if (CARD_MATCHERS[value]) return CARD_MATCHERS[value](row);
     return row.type === value; // 'รายเดิม' | 'รายใหม่' | 'Clear'
   }
+  // เดือนเก่า = มีอยู่ในช่วงเดือนเก่า (รายเดิม + Clear) / เดือนใหม่ = มีอยู่ในช่วง
+  // เดือนใหม่ (รายเดิม + รายใหม่) - ตรงกับเงื่อนไข showOld/showNew ของคอลัมน์เดือน
+  function periodMatches(row, value){
+    if (value === 'old') return row.type === 'รายเดิม' || row.type === 'Clear';
+    if (value === 'new') return row.type === 'รายเดิม' || row.type === 'รายใหม่';
+    return true;
+  }
 
   function matchesFilters(row, excludeKeys){
-    for (const k of ['kong','sckl','proj','gl','group','card','chg']){
+    for (const k of ['kong','sckl','proj','gl','group','card','chg','period']){
       if (excludeKeys.includes(k)) continue;
       const fv = state.filters[k];
       if (fv === 'all') continue;
       if (k === 'card'){ if (!cardMatches(row, fv)) return false; }
       else if (k === 'chg'){ if (row.chg !== fv) return false; }
+      else if (k === 'period'){ if (!periodMatches(row, fv)) return false; }
       else if (row[k] !== fv) return false;
     }
     return true;
@@ -668,13 +689,14 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   }
 
   // ---------- Chips / Reset ----------
-  const FILTER_LABELS = { kong:'กอง', sckl:'สคจ./สคล.', proj:'โครงการ', gl:'GL', group:'กลุ่มการดำเนินงาน', card:'กลุ่ม', chg:'ส่วนต่าง (รายเดิม)' };
+  const FILTER_LABELS = { kong:'กอง', sckl:'สคจ./สคล.', proj:'โครงการ', gl:'GL', group:'กลุ่มการดำเนินงาน', card:'กลุ่ม', chg:'ส่วนต่าง (รายเดิม)', period:'เดือน' };
   const CARD_CHIP_TEXT = { 'net':'ยอดรวมสุทธิ (รายเดิม+รายใหม่)', 'รายเดิม':'รายเดิม', 'รายใหม่':'รายใหม่', 'Clear':'Clear' };
+  const PERIOD_CHIP_TEXT = { 'old':'เดือนเก่า', 'new':'เดือนใหม่' };
   function renderChips(){
     const wrap = document.getElementById('chips-row');
     const active = Object.entries(state.filters).filter(([k,v]) => v !== 'all');
     wrap.innerHTML = active.map(([k,v]) =>
-      '<span class="chip">'+FILTER_LABELS[k]+': '+(k==='card'?CARD_CHIP_TEXT[v]:v)+'<button data-clear="'+k+'" aria-label="ล้างตัวกรอง '+FILTER_LABELS[k]+'">&#10005;</button></span>'
+      '<span class="chip">'+FILTER_LABELS[k]+': '+(k==='card'?CARD_CHIP_TEXT[v]:(k==='period'?PERIOD_CHIP_TEXT[v]:v))+'<button data-clear="'+k+'" aria-label="ล้างตัวกรอง '+FILTER_LABELS[k]+'">&#10005;</button></span>'
     ).join('');
     wrap.querySelectorAll('button[data-clear]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -688,14 +710,14 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     document.getElementById('btn-reset').disabled = active.length === 0;
   }
   function syncSelectsFromState(){
-    ['kong','sckl'].forEach(k=>{
+    ['kong','sckl','period'].forEach(k=>{
       const sel = document.getElementById('f-'+k);
       sel.value = state.filters[k] === 'all' ? 'all' : encodeURIComponent(state.filters[k]);
     });
     syncProjComboLabel();
   }
   document.getElementById('btn-reset').addEventListener('click', ()=>{
-    state.filters = { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all', card:'all', chg:'all' };
+    state.filters = { kong:'all', sckl:'all', proj:'all', gl:'all', group:'all', card:'all', chg:'all', period:'all' };
     syncSelectsFromState();
     state.page = 1;
     render();
