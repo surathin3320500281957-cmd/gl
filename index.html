@@ -183,6 +183,24 @@ select.filter-select:hover{border-color:#8A8578;}
 .gl-proj-row td:first-child{ color:var(--text-faint); }
 .vdash{ color:var(--text-faint); }
 
+#ops-matrix-table{ border-collapse:collapse; width:100%; font-size:13.5px; }
+#ops-matrix-table th, #ops-matrix-table td{ padding:9px 12px; border:1px solid var(--border); white-space:nowrap; }
+#ops-matrix-table thead th{ background:var(--net); color:#fff; font-weight:700; position:sticky; top:0; }
+#ops-matrix-table th.row-label{ text-align:left; background:#F1E9FB; color:#5A3A9C; font-weight:700; position:sticky; left:0; z-index:2; }
+#ops-matrix-table td.mx-cell{ text-align:right; cursor:pointer; transition:background .12s; font-variant-numeric:tabular-nums; }
+#ops-matrix-table td.mx-cell:hover{ background:#FDEFF4; }
+#ops-matrix-table td.mx-cell.active{ background:var(--net); color:#fff; }
+#ops-matrix-table td.mx-cell .mx-n{ font-weight:700; display:block; }
+#ops-matrix-table td.mx-cell .mx-amt{ font-size:11.5px; color:var(--text-faint); display:block; }
+#ops-matrix-table td.mx-cell.active .mx-amt{ color:rgba(255,255,255,0.85); }
+#ops-matrix-table td.mx-cell.empty{ color:var(--text-faint); cursor:default; }
+#ops-matrix-table tr.row-done th.row-label, #ops-matrix-table tr.row-done td{ opacity:0.55; }
+#ops-matrix-table tfoot td, #ops-matrix-table tfoot th{ font-weight:800; background:#FBF3F6; }
+#ops-matrix-table tfoot td.mx-total{ text-align:right; }
+#ops-matrix-table tfoot td.mx-total .mx-n{ font-weight:800; display:block; }
+#ops-matrix-table tfoot td.mx-total .mx-amt{ font-size:11.5px; color:var(--text-faint); display:block; font-weight:400; }
+.ops-detail-note{ max-width:420px; white-space:normal; font-size:13px; color:var(--text-muted); line-height:1.4; }
+
 /* ============ Layout ============ */
 main{max-width:1440px; margin:0 auto; padding:28px 24px 80px;}
 section{margin-bottom:40px;}
@@ -405,6 +423,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 <div class="tab-bar">
   <button class="tab-btn active" id="tab-btn-main" type="button">แดชบอร์ดหลัก</button>
   <button class="tab-btn" id="tab-btn-verify" type="button">ข้อมูลต้นฉบับ (ตรวจสอบ)</button>
+  <button class="tab-btn" id="tab-btn-ops" type="button">ติดตามงาน (กลุ่มการดำเนินงาน)</button>
 </div>
 
 <div id="tab-verify" hidden>
@@ -541,6 +560,66 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   </section>
 </div>
 
+<div id="tab-ops" hidden>
+  <div class="verify-toolbar">
+    <div class="filter-group">
+      <label for="f-ops-dim">มุมมองตาม</label>
+      <select id="f-ops-dim" class="filter-select">
+        <option value="kong">กอง</option>
+        <option value="sckl">สคจ./สคล. (สาขา)</option>
+      </select>
+    </div>
+    <span class="hint" id="ops-filter-hint"></span>
+    <button class="btn-reset" id="btn-ops-reset" type="button" disabled>&#10005; ล้างตัวกรอง</button>
+  </div>
+  <div class="chips-row" id="ops-chips-row"></div>
+
+  <section id="sec-ops-matrix">
+    <div class="section-head">
+      <h2>ตารางไขว้: กลุ่มการดำเนินงาน × <span id="ops-dim-label">กอง</span></h2>
+      <span class="hint">คลิกช่องเพื่อกรองตารางรายละเอียดด้านล่าง &middot; เรียงแถวตามยอดเงินค้างมากไปน้อย (ไม่รวม "ดำเนินการเสร็จสิ้นแล้ว")</span>
+    </div>
+    <div class="table-wrap">
+      <table id="ops-matrix-table"></table>
+    </div>
+  </section>
+
+  <section id="sec-ops-detail">
+    <div class="section-head">
+      <h2>รายละเอียด + หมายเหตุ</h2>
+      <span class="hint">ค้นหาในหมายเหตุ/โครงการ/สาขาได้ &middot; เรียงคอลัมน์ได้</span>
+    </div>
+    <div class="table-toolbar">
+      <div class="search-box">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="ops-search-input" type="text" placeholder="ค้นหาในหมายเหตุ, โครงการ, สาขา, ชื่อ GL...">
+      </div>
+      <span class="hint" id="ops-detail-hint"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="ops-detail-table">
+        <thead>
+          <tr>
+            <th data-okey="group">กลุ่มการดำเนินงาน <span class="sort-arrow"></span></th>
+            <th data-okey="kong">กอง <span class="sort-arrow"></span></th>
+            <th data-okey="sckl">สคจ./สคล. <span class="sort-arrow"></span></th>
+            <th data-okey="proj">โครงการ <span class="sort-arrow"></span></th>
+            <th data-okey="gl">ชื่อ GL <span class="sort-arrow"></span></th>
+            <th data-okey="type">ประเภทรายการ <span class="sort-arrow"></span></th>
+            <th class="num" data-okey="net">จำนวนเงินสุทธิ <span class="sort-arrow">▼</span></th>
+            <th data-okey="detail">หมายเหตุ (รายละเอียดดำเนินงาน)</th>
+          </tr>
+        </thead>
+        <tbody id="ops-detail-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span class="info" id="ops-page-info"></span>
+      <div class="pager-btns" id="ops-pager-btns"></div>
+    </div>
+  </section>
+</div>
+
 <main id="tab-main">
 
   <section id="sec-cards">
@@ -667,6 +746,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     chg: DICT.chg[r[8]],
     net: r[9],
   }));
+  window.MAIN_ROWS = ROWS; // เปิดให้แท็บ "ติดตามงาน" ใช้ข้อมูลชุดเดียวกัน ไม่ต้องฝังข้อมูลซ้ำ
 
   const fmtInt = n => Math.round(n).toLocaleString('th-TH');
   const fmtMoney = n => n.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -1846,6 +1926,277 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       renderVerifyAll();
       verifyRendered = true;
     }
+  });
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  // ---------- แท็บ "ติดตามงาน (กลุ่มการดำเนินงาน)" ----------
+  // ใช้ข้อมูลชุดเดียวกับแท็บหลัก (window.MAIN_ROWS) ไม่ฝังข้อมูลซ้ำ ไม่แตะโค้ดแท็บหลักเลย
+  const OROWS = (window.MAIN_ROWS || []).map(r => ({
+    gl: r.gl, kong: r.kong || 'ไม่ระบุ', sckl: r.sckl || 'ไม่ระบุ', proj: r.proj || 'ไม่ระบุ',
+    group: r.group || 'ไม่ระบุ', detail: r.detail || '', type: r.type, net: r.net,
+  }));
+  const DONE_LABEL = 'ดำเนินการเสร็จสิ้นแล้ว';
+  const ofmtInt = n => Math.round(n).toLocaleString('th-TH');
+  const ofmtMoney = n => n.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  const ostate = {
+    dim: 'kong',
+    selectedGroup: null,
+    selectedDim: null,
+    search: '',
+    sort: { key: 'net', dir: -1 },
+    page: 1,
+    pageSize: 50,
+  };
+
+  // ---------- สร้างรายชื่อกลุ่ม/มิติ ----------
+  function buildGroupOrder(){
+    const totals = new Map();
+    OROWS.forEach(r => totals.set(r.group, (totals.get(r.group)||0) + r.net));
+    const groups = Array.from(totals.keys());
+    const active = groups.filter(g => g !== DONE_LABEL).sort((a,b) => totals.get(b) - totals.get(a));
+    const done = groups.filter(g => g === DONE_LABEL);
+    return [...active, ...done];
+  }
+
+  function buildDimList(dimKey){
+    if (dimKey === 'kong'){
+      const preferred = ['มบ.','ตบ.1','ตบ.2'];
+      const present = Array.from(new Set(OROWS.map(r=>r.kong)));
+      const known = preferred.filter(k => present.includes(k));
+      const rest = present.filter(k => !preferred.includes(k)).sort((a,b)=>a.localeCompare(b,'th'));
+      return [...known, ...rest];
+    }
+    const totals = new Map();
+    OROWS.forEach(r => totals.set(r.sckl, (totals.get(r.sckl)||0) + r.net));
+    return Array.from(totals.keys()).sort((a,b) => totals.get(b) - totals.get(a));
+  }
+
+  // ---------- Matrix ----------
+  function renderOpsMatrix(){
+    const dimKey = ostate.dim;
+    document.getElementById('ops-dim-label').textContent = dimKey === 'kong' ? 'กอง' : 'สคจ./สคล. (สาขา)';
+    document.getElementById('f-ops-dim').value = dimKey;
+
+    const groups = buildGroupOrder();
+    const dims = buildDimList(dimKey);
+
+    // aggregate
+    const agg = new Map(); // "group||dim" -> {n, amt}
+    OROWS.forEach(r => {
+      const dv = dimKey === 'kong' ? r.kong : r.sckl;
+      const k = r.group + '||' + dv;
+      if (!agg.has(k)) agg.set(k, {n:0, amt:0});
+      const e = agg.get(k);
+      e.n++; e.amt += r.net;
+    });
+
+    let thead = '<thead><tr><th class="row-label">กลุ่มการดำเนินงาน</th>';
+    dims.forEach(d => thead += `<th>${d}</th>`);
+    thead += '<th>รวม</th></tr></thead>';
+
+    let tbody = '<tbody>';
+    const colTotals = new Map(dims.map(d => [d, {n:0, amt:0}]));
+    let grandN = 0, grandAmt = 0;
+    groups.forEach(g => {
+      const isDone = g === DONE_LABEL;
+      tbody += `<tr${isDone ? ' class="row-done"' : ''}><th class="row-label">${g}</th>`;
+      let rowN = 0, rowAmt = 0;
+      dims.forEach(d => {
+        const e = agg.get(g+'||'+d);
+        const n = e ? e.n : 0, amt = e ? e.amt : 0;
+        rowN += n; rowAmt += amt;
+        const ct = colTotals.get(d); ct.n += n; ct.amt += amt;
+        const isActive = ostate.selectedGroup === g && ostate.selectedDim === d;
+        if (n === 0){
+          tbody += '<td class="mx-cell empty">–</td>';
+        } else {
+          tbody += `<td class="mx-cell${isActive?' active':''}" data-ogroup="${encodeURIComponent(g)}" data-odim="${encodeURIComponent(d)}">
+            <span class="mx-n">${ofmtInt(n)}</span><span class="mx-amt">${ofmtMoney(amt)}</span>
+          </td>`;
+        }
+      });
+      grandN += rowN; grandAmt += rowAmt;
+      tbody += `<td class="mx-cell${ostate.selectedGroup===g && !ostate.selectedDim?' active':''}" data-ogroup="${encodeURIComponent(g)}" data-odim="">
+        <span class="mx-n">${ofmtInt(rowN)}</span><span class="mx-amt">${ofmtMoney(rowAmt)}</span>
+      </td>`;
+      tbody += '</tr>';
+    });
+    tbody += '</tbody>';
+
+    let tfoot = '<tfoot><tr><td>รวมทั้งหมด</td>';
+    dims.forEach(d => {
+      const ct = colTotals.get(d);
+      tfoot += `<td class="mx-cell${!ostate.selectedGroup && ostate.selectedDim===d?' active':''}" data-ogroup="" data-odim="${encodeURIComponent(d)}"><span class="mx-n">${ofmtInt(ct.n)}</span><span class="mx-amt">${ofmtMoney(ct.amt)}</span></td>`;
+    });
+    tfoot += `<td class="mx-total"><span class="mx-n">${ofmtInt(grandN)}</span><span class="mx-amt">${ofmtMoney(grandAmt)}</span></td></tr></tfoot>`;
+
+    document.getElementById('ops-matrix-table').innerHTML = thead + tbody + tfoot;
+
+    document.querySelectorAll('#ops-matrix-table .mx-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const g = cell.dataset.ogroup ? decodeURIComponent(cell.dataset.ogroup) : null;
+        const d = cell.dataset.odim ? decodeURIComponent(cell.dataset.odim) : null;
+        if (ostate.selectedGroup === g && ostate.selectedDim === d){
+          ostate.selectedGroup = null; ostate.selectedDim = null;
+        } else {
+          ostate.selectedGroup = g; ostate.selectedDim = d;
+        }
+        ostate.page = 1;
+        renderOpsAll();
+      });
+    });
+  }
+
+  // ---------- Chips + reset ----------
+  function renderOpsChips(){
+    const chips = [];
+    if (ostate.selectedGroup) chips.push(['กลุ่มการดำเนินงาน', ostate.selectedGroup, 'group']);
+    if (ostate.selectedDim) chips.push([ostate.dim === 'kong' ? 'กอง' : 'สคจ./สคล.', ostate.selectedDim, 'dim']);
+    const wrap = document.getElementById('ops-chips-row');
+    wrap.innerHTML = chips.map(([label,val,key]) =>
+      `<span class="chip">${label}: ${val}<button data-oclear="${key}" aria-label="ล้าง ${label}">&#10005;</button></span>`
+    ).join('');
+    wrap.querySelectorAll('button[data-oclear]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.oclear === 'group') ostate.selectedGroup = null;
+        else ostate.selectedDim = null;
+        ostate.page = 1;
+        renderOpsAll();
+      });
+    });
+    document.getElementById('btn-ops-reset').disabled = chips.length === 0;
+    document.getElementById('ops-filter-hint').textContent =
+      chips.length ? '' : 'คลิกช่องในตารางไขว้ด้านล่างเพื่อกรอง';
+  }
+
+  document.getElementById('btn-ops-reset').addEventListener('click', () => {
+    ostate.selectedGroup = null; ostate.selectedDim = null; ostate.page = 1;
+    renderOpsAll();
+  });
+
+  document.getElementById('f-ops-dim').addEventListener('change', (e) => {
+    ostate.dim = e.target.value;
+    ostate.selectedDim = null; // มิติเปลี่ยน ตัวกรองสาขา/กองเดิมใช้ไม่ได้แล้ว
+    ostate.page = 1;
+    renderOpsAll();
+  });
+
+  // ---------- ตารางรายละเอียด ----------
+  function getOpsFilteredRows(){
+    let rows = OROWS;
+    if (ostate.selectedGroup) rows = rows.filter(r => r.group === ostate.selectedGroup);
+    if (ostate.selectedDim){
+      const dk = ostate.dim;
+      rows = rows.filter(r => (dk === 'kong' ? r.kong : r.sckl) === ostate.selectedDim);
+    }
+    const q = ostate.search.trim().toLowerCase();
+    if (q){
+      rows = rows.filter(r =>
+        r.detail.toLowerCase().includes(q) ||
+        r.proj.toLowerCase().includes(q) ||
+        r.gl.toLowerCase().includes(q) ||
+        r.kong.toLowerCase().includes(q) ||
+        r.sckl.toLowerCase().includes(q) ||
+        r.group.toLowerCase().includes(q)
+      );
+    }
+    return rows;
+  }
+
+  function osortRows(rows){
+    const { key, dir } = ostate.sort;
+    return [...rows].sort((a,b) => {
+      const av = a[key], bv = b[key];
+      if (typeof av === 'string') return av.localeCompare(bv, 'th') * dir;
+      return (av - bv) * dir;
+    });
+  }
+
+  function renderOpsDetail(){
+    const filtered = getOpsFilteredRows();
+    const sorted = osortRows(filtered);
+    const totalPages = Math.max(1, Math.ceil(sorted.length / ostate.pageSize));
+    if (ostate.page > totalPages) ostate.page = totalPages;
+    const start = (ostate.page - 1) * ostate.pageSize;
+    const pageRows = sorted.slice(start, start + ostate.pageSize);
+
+    document.getElementById('ops-detail-tbody').innerHTML = pageRows.length ? pageRows.map(r => `
+      <tr>
+        <td>${r.group}</td>
+        <td>${r.kong}</td>
+        <td>${r.sckl}</td>
+        <td>${r.proj}</td>
+        <td>${r.gl}</td>
+        <td>${r.type}</td>
+        <td class="num">${ofmtMoney(r.net)}</td>
+        <td class="ops-detail-note">${r.detail || '<span class="vdash">–</span>'}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="8" style="text-align:center; color:var(--text-faint); padding:24px;">ไม่พบข้อมูลตามตัวกรองที่เลือก</td></tr>';
+
+    document.getElementById('ops-detail-hint').textContent = `พบ ${ofmtInt(sorted.length)} รายการ (จากทั้งหมด ${ofmtInt(OROWS.length)})`;
+    document.getElementById('ops-page-info').textContent = `หน้า ${ostate.page} / ${totalPages}`;
+
+    const pagerBtns = document.getElementById('ops-pager-btns');
+    pagerBtns.innerHTML = `<button ${ostate.page<=1?'disabled':''} data-opage="prev">&#8592;</button><button ${ostate.page>=totalPages?'disabled':''} data-opage="next">&#8594;</button>`;
+    pagerBtns.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.opage === 'prev' && ostate.page > 1) ostate.page--;
+        if (btn.dataset.opage === 'next' && ostate.page < totalPages) ostate.page++;
+        renderOpsDetail();
+      });
+    });
+  }
+
+  document.querySelectorAll('#ops-detail-table thead th[data-okey]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.okey;
+      if (ostate.sort.key === key) ostate.sort.dir *= -1;
+      else ostate.sort = { key, dir: key === 'net' ? -1 : 1 };
+      ostate.page = 1;
+      renderOpsDetail();
+    });
+  });
+
+  document.getElementById('ops-search-input').addEventListener('input', (e) => {
+    ostate.search = e.target.value;
+    ostate.page = 1;
+    renderOpsDetail();
+  });
+
+  function renderOpsAll(){
+    renderOpsChips();
+    renderOpsMatrix();
+    renderOpsDetail();
+  }
+
+  // ---------- Tab switching ----------
+  const tabBtnOps = document.getElementById('tab-btn-ops');
+  const tabBtnMain2 = document.getElementById('tab-btn-main');
+  const tabBtnVerify2 = document.getElementById('tab-btn-verify');
+  const tabMain2 = document.getElementById('tab-main');
+  const tabVerify2 = document.getElementById('tab-verify');
+  const tabOps = document.getElementById('tab-ops');
+  let opsRendered = false;
+
+  function hideAllTabs(){
+    tabBtnMain2.classList.remove('active');
+    tabBtnVerify2.classList.remove('active');
+    tabBtnOps.classList.remove('active');
+    tabMain2.hidden = true;
+    tabVerify2.hidden = true;
+    tabOps.hidden = true;
+  }
+  tabBtnMain2.addEventListener('click', () => { hideAllTabs(); tabBtnMain2.classList.add('active'); tabMain2.hidden = false; });
+  tabBtnVerify2.addEventListener('click', () => { hideAllTabs(); tabBtnVerify2.classList.add('active'); tabVerify2.hidden = false; });
+  tabBtnOps.addEventListener('click', () => {
+    hideAllTabs();
+    tabBtnOps.classList.add('active');
+    tabOps.hidden = false;
+    if (!opsRendered){ renderOpsAll(); opsRendered = true; }
   });
 })();
 </script>
