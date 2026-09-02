@@ -194,17 +194,28 @@ select.filter-select:hover{border-color:#8A8578;}
 .vbar-track{ height:19px; background:#F0EFEA; border-radius:6px; overflow:hidden; position:relative; transition:background .12s; }
 .vbar-row:hover .vbar-track{ background:var(--surface-2); }
 .vbar-fill{ height:100%; border-radius:6px; transition:width .35s cubic-bezier(.2,.7,.3,1); min-width:4px; }
-.vbar-fill.old{ background:#C9C4E8; }
-.vbar-fill.new{ background:var(--net); }
+/* ชื่อ GL: เหลืองทอง(เก่า) / ชมพูบานเย็น(ใหม่) */
+#verify-chart-gl .vbar-fill.old{ background:#F4A100; }
+#verify-chart-gl .vbar-fill.new{ background:#E64980; }
+#verify-chart-gl .vbar-tag{ color:#fff; }
+/* สคจ./สคล.: น้ำเงินสด(เก่า) / เขียวมรกต(ใหม่) */
+#verify-chart-sckl .vbar-fill.old{ background:#4C6EF5; }
+#verify-chart-sckl .vbar-fill.new{ background:#12B886; }
+#verify-chart-sckl .vbar-tag{ color:#fff; }
+/* กลุ่มการดำเนินงาน: ม่วงสด(เก่า) / ส้มสด(ใหม่) */
+#verify-chart-group .vbar-fill.old{ background:#9775FA; }
+#verify-chart-group .vbar-fill.new{ background:#FF922B; }
+#verify-chart-group .vbar-tag{ color:#fff; }
 .vbar-amt{ position:absolute; right:6px; top:50%; transform:translateY(-50%); font-size:10.5px; font-weight:800; color:var(--text);
   background:rgba(255,255,255,0.92); padding:2px 7px; border-radius:999px; box-shadow:0 1px 2px rgba(0,0,0,0.15); white-space:nowrap; }
-.vbar-tag{ font-size:9.5px; font-weight:700; color:var(--text-faint); position:absolute; left:6px; top:50%; transform:translateY(-50%); }
+.vbar-tag{
+  font-size:10px; font-weight:800; color:#fff; position:absolute; left:6px; top:50%; transform:translateY(-50%);
+  background:#6741A8; padding:2px 8px; border-radius:999px; letter-spacing:.02em; white-space:nowrap;
+}
 .vbar-row.active .vbar-track{ outline:2px solid var(--text); outline-offset:1px; }
-.vchart-legend{ display:flex; gap:14px; font-size:11.5px; color:var(--text-muted); margin-bottom:10px; }
+.vchart-legend{ display:flex; gap:14px; font-size:11.5px; color:var(--text-muted); margin-bottom:10px; font-weight:600; }
 .vchart-legend span{ display:inline-flex; align-items:center; gap:5px; }
 .vchart-legend .dot{ width:9px; height:9px; border-radius:3px; display:inline-block; }
-.vchart-legend .dot.old{ background:#C9C4E8; }
-.vchart-legend .dot.new{ background:var(--net); }
 
 /* ============ Layout ============ */
 main{max-width:1440px; margin:0 auto; padding:28px 24px 80px;}
@@ -444,16 +455,19 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       <div class="chart-card">
         <div class="chart-title">ชื่อ GL (ตัวขับเคลื่อนหลัก)</div>
         <div class="chart-sub">เรียงตามจำนวนเงิน (เดือนใหม่)</div>
+        <div class="vchart-legend"><span><i class="dot" style="background:#F4A100"></i>เดือนเก่า</span><span><i class="dot" style="background:#E64980"></i>เดือนใหม่</span></div>
         <div class="bars" id="verify-chart-gl"></div>
       </div>
       <div class="chart-card">
         <div class="chart-title">สคจ. / สคล. (สาขา)</div>
         <div class="chart-sub">เรียงตามจำนวนเงิน (เดือนใหม่)</div>
+        <div class="vchart-legend"><span><i class="dot" style="background:#4C6EF5"></i>เดือนเก่า</span><span><i class="dot" style="background:#12B886"></i>เดือนใหม่</span></div>
         <div class="bars" id="verify-chart-sckl"></div>
       </div>
       <div class="chart-card">
         <div class="chart-title">กลุ่มการดำเนินงาน</div>
         <div class="chart-sub">เรียงตามจำนวนเงิน (เดือนใหม่)</div>
+        <div class="vchart-legend"><span><i class="dot" style="background:#9775FA"></i>เดือนเก่า</span><span><i class="dot" style="background:#FF922B"></i>เดือนใหม่</span></div>
         <div class="bars" id="verify-chart-group"></div>
       </div>
     </div>
