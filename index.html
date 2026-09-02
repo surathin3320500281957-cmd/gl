@@ -411,11 +411,11 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 </div>
 
 <div class="tab-bar">
-  <button class="tab-btn active" id="tab-btn-main" type="button">แดชบอร์ดหลัก</button>
-  <button class="tab-btn" id="tab-btn-verify" type="button">ข้อมูลต้นฉบับ (ตรวจสอบ)</button>
+  <button class="tab-btn active" id="tab-btn-verify" type="button">เพิ่ม/ลด (เทียบเดือนก่อน)</button>
+  <button class="tab-btn" id="tab-btn-main" type="button">เดือนนี้</button>
 </div>
 
-<div id="tab-verify" hidden>
+<div id="tab-verify">
   <div class="verify-toolbar">
     <div class="filter-group">
       <label for="f-verify-gl">ชื่อ GL</label>
@@ -576,7 +576,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   </section>
 </div>
 
-<main id="tab-main">
+<main id="tab-main" hidden>
 
   <div class="verify-toolbar">
     <div class="filter-group">
@@ -2002,6 +2002,9 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       verifyRendered = true;
     }
   });
+  // เรนเดอร์แท็บนี้ทันทีตอนโหลดหน้า (ไม่รอ lazy-render ตอนคลิก) เพราะตอนนี้เป็นแท็บที่โชว์เป็นค่าเริ่มต้น
+  renderVerifyAll();
+  verifyRendered = true;
 })();
 </script>
 
