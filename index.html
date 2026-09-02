@@ -434,16 +434,6 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       </select>
     </div>
     <button class="btn-reset" id="btn-verify-reset" type="button" disabled>&#10005; ล้างตัวกรองทั้งหมด</button>
-    <div class="verify-export-btns">
-      <button class="btn-export excel" id="btn-verify-export-excel">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M6 3h9l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M9 12l6 6M15 12l-6 6"/></svg>
-        Export Excel
-      </button>
-      <button class="btn-export pdf" id="btn-verify-export-pdf">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M6 9V3h9l3 3v13a1 1 0 01-1 1H6a1 1 0 01-1-1V9z"/><path d="M9 13h6M9 17h4"/></svg>
-        Export PDF
-      </button>
-    </div>
   </div>
   <div class="chips-row" id="verify-chips-row"></div>
 
@@ -459,6 +449,16 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     <div class="section-head">
       <h2>ตารางสรุปตาม ชื่อ GL</h2>
       <span class="hint">เปรียบเทียบคอลัมน์ "จำนวนเงิน" ต้นฉบับ ระหว่างเดือนเก่า (BF) กับเดือนใหม่ (ก่อนคำนวณผ่านสูตรใดๆ) &middot; "ราย" คือจำนวนแถวข้อมูลดิบ &middot; กลุ่มตาม ชื่อ GL แล้วแตกย่อยตามชื่อโครงการ</span>
+      <div class="verify-export-btns">
+        <button class="btn-export excel" id="btn-verify-summary-export-excel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M6 3h9l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M9 12l6 6M15 12l-6 6"/></svg>
+          Export Excel
+        </button>
+        <button class="btn-export pdf" id="btn-verify-summary-export-pdf">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M6 9V3h9l3 3v13a1 1 0 01-1 1H6a1 1 0 01-1-1V9z"/><path d="M9 13h6M9 17h4"/></svg>
+          Export PDF
+        </button>
+      </div>
     </div>
     <div class="table-wrap">
       <table id="verify-summary-table">
@@ -499,6 +499,16 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     <div class="section-head">
       <h2>ตารางรายละเอียด (ต้นฉบับ)</h2>
       <span class="hint">ระดับ PrimaryKEY + ชื่อ GL &middot; ค้นหาและเรียงได้</span>
+      <div class="verify-export-btns">
+        <button class="btn-export excel" id="btn-verify-detail-export-excel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M6 3h9l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M9 12l6 6M15 12l-6 6"/></svg>
+          Export Excel
+        </button>
+        <button class="btn-export pdf" id="btn-verify-detail-export-pdf">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M6 9V3h9l3 3v13a1 1 0 01-1 1H6a1 1 0 01-1-1V9z"/><path d="M9 13h6M9 17h4"/></svg>
+          Export PDF
+        </button>
+      </div>
     </div>
     <div class="table-toolbar">
       <div class="search-box">
@@ -1662,40 +1672,74 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     renderVerifyDetail();
   });
 
-  // ---------- Export Excel ----------
-  document.getElementById('btn-verify-export-excel').addEventListener('click', () => {
+  // ---------- Export: ตารางสรุปตาม GL ----------
+  function verifySummaryAoa(){
     const glGroups = vstate._lastGlGroups || [];
     const grandTotal = vstate._lastGrandTotal || {oldN:0,oldAmt:0,newN:0,newAmt:0};
-    const sumAoa = [['ชื่อ GL','โครงการ','ราย (เดือนเก่า)','เงิน (เดือนเก่า)','ราย (เดือนใหม่)','เงิน (เดือนใหม่)','ราย (ส่วนต่าง)','เงิน (ส่วนต่าง)']];
+    const aoa = [['ชื่อ GL','โครงการ','ราย (เดือนเก่า)','เงิน (เดือนเก่า)','ราย (เดือนใหม่)','เงิน (เดือนใหม่)','ราย (ส่วนต่าง)','เงิน (ส่วนต่าง)']];
     glGroups.forEach(g => {
       g.rows.forEach(r => {
-        sumAoa.push([g.gl, r.proj, r.oldN, r.oldAmt, r.newN, r.newAmt, r.newN-r.oldN, Math.round((r.newAmt-r.oldAmt)*100)/100]);
+        aoa.push([g.gl, r.proj, r.oldN, r.oldAmt, r.newN, r.newAmt, r.newN-r.oldN, Math.round((r.newAmt-r.oldAmt)*100)/100]);
       });
-      sumAoa.push(['รวม '+g.gl, '', g.sub.oldN, g.sub.oldAmt, g.sub.newN, g.sub.newAmt, g.sub.newN-g.sub.oldN, Math.round((g.sub.newAmt-g.sub.oldAmt)*100)/100]);
+      aoa.push(['รวม '+g.gl, '', g.sub.oldN, g.sub.oldAmt, g.sub.newN, g.sub.newAmt, g.sub.newN-g.sub.oldN, Math.round((g.sub.newAmt-g.sub.oldAmt)*100)/100]);
     });
-    sumAoa.push(['รวมทั้งหมด', '', grandTotal.oldN, grandTotal.oldAmt, grandTotal.newN, grandTotal.newAmt, grandTotal.newN-grandTotal.oldN, Math.round((grandTotal.newAmt-grandTotal.oldAmt)*100)/100]);
-    const wsSum = XLSX.utils.aoa_to_sheet(sumAoa);
+    aoa.push(['รวมทั้งหมด', '', grandTotal.oldN, grandTotal.oldAmt, grandTotal.newN, grandTotal.newAmt, grandTotal.newN-grandTotal.oldN, Math.round((grandTotal.newAmt-grandTotal.oldAmt)*100)/100]);
+    return aoa;
+  }
+
+  document.getElementById('btn-verify-summary-export-excel').addEventListener('click', () => {
+    const wsSum = XLSX.utils.aoa_to_sheet(verifySummaryAoa());
     wsSum['!cols'] = [{wch:24},{wch:30},{wch:12},{wch:16},{wch:12},{wch:16},{wch:12},{wch:16}];
-
-    const detRows = vsortRows(getVerifySearchedRows(), vstate.detailSort);
-    const detAoa = [['PimaryKEY','ชื่อ GL','กอง','สคจ./สคล.','โครงการ','จำนวนเงิน (เดือนเก่า)','จำนวนเงิน (เดือนใหม่)','เพิ่ม/ลด']];
-    detRows.forEach(r => detAoa.push([r.key, r.gl, r.kong, r.sckl, r.proj, r.old, r.new, r.diff]));
-    const wsDet = XLSX.utils.aoa_to_sheet(detAoa);
-    wsDet['!cols'] = [{wch:14},{wch:22},{wch:8},{wch:20},{wch:30},{wch:18},{wch:18},{wch:16}];
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, wsSum, 'สรุปตามGL');
-    XLSX.utils.book_append_sheet(wb, wsDet, 'รายละเอียด');
-    XLSX.writeFile(wb, 'ตรวจสอบข้อมูลต้นฉบับ_เงินมัดจำ_เงินจอง.xlsx');
+    XLSX.writeFile(wb, 'ตรวจสอบข้อมูลต้นฉบับ_สรุปตามGL.xlsx');
   });
 
-  // ---------- Export PDF (Blob URL + print, แบบเดียวกับแท็บหลัก) ----------
-  function verifyExportPdf(){
-    const title = 'ตรวจสอบข้อมูลต้นฉบับ (เดือนเก่า vs เดือนใหม่)';
+  function verifyActiveFiltersText(){
+    return Object.entries(vstate.filters).filter(([k,v])=>v!=='all').map(([k,v])=>{
+      let t = v;
+      if (k==='period') t = VPERIOD_TEXT[v];
+      if (k==='card') t = VCARD_TEXT[v];
+      return VFILTER_LABELS[k]+': '+t;
+    }).join('   ·   ') || 'ไม่มีตัวกรอง (แสดงข้อมูลทั้งหมด)';
+  }
+
+  const VPDF_STYLE = `
+  @page { size: A4 landscape; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Sarabun','Segoe UI',sans-serif; margin:0; padding:0; color:#1a1a1a; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .meta { font-size:12px; color:#666; margin-bottom:10px; }
+  table { width:100%; border-collapse:collapse; font-size:11px; margin-bottom:8px; }
+  thead th { background:#7048B8; color:#fff; text-align:left; padding:6px 8px; font-weight:700; white-space:nowrap; }
+  tbody td { padding:5px 8px; border-bottom:1px solid #e5e5e5; vertical-align:top; }
+  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  tr.sub td { font-weight:800; background:#F1E9FB; }
+  tr { break-inside: avoid; }
+  thead { display: table-header-group; }`;
+
+  function openVerifyPdf(title, tableHtml){
     const now = new Date().toLocaleString('th-TH');
+    const html = `<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8">
+<title>${title}</title>
+<style>${VPDF_STYLE}</style></head>
+<body>
+  <h1>${title}</h1>
+  <div class="meta">พิมพ์เมื่อ ${now} &middot; ตัวกรองที่ใช้: ${verifyActiveFiltersText()}</div>
+  ${tableHtml}
+  <script>
+    window.onload = function(){ setTimeout(function(){ window.print(); }, 400); };
+  <\/script>
+</body></html>`;
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  }
+
+  document.getElementById('btn-verify-summary-export-pdf').addEventListener('click', () => {
     const glGroups = vstate._lastGlGroups || [];
     const grandTotal = vstate._lastGrandTotal || {oldN:0,oldAmt:0,newN:0,newAmt:0};
-
     let sumBody = '';
     glGroups.forEach(g => {
       g.rows.forEach((r, i) => {
@@ -1720,50 +1764,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         <td class="num">${vfmtSigned(g.sub.newAmt-g.sub.oldAmt)}</td>
       </tr>`;
     });
-
-    const detRows = vsortRows(getVerifySearchedRows(), vstate.detailSort);
-    const detBody = detRows.map(r => `
-      <tr>
-        <td>${r.key}</td>
-        <td>${r.gl}</td>
-        <td>${r.kong}</td>
-        <td>${r.sckl}</td>
-        <td>${r.proj}</td>
-        <td class="num">${r.old>0?vfmtMoney(r.old):'–'}</td>
-        <td class="num">${r.new>0?vfmtMoney(r.new):'–'}</td>
-        <td class="num">${vfmtSigned(r.diff)}</td>
-      </tr>`).join('');
-
-    const activeFiltersText = Object.entries(vstate.filters).filter(([k,v])=>v!=='all').map(([k,v])=>{
-      let t = v;
-      if (k==='period') t = VPERIOD_TEXT[v];
-      if (k==='card') t = VCARD_TEXT[v];
-      return VFILTER_LABELS[k]+': '+t;
-    }).join('   ·   ') || 'ไม่มีตัวกรอง (แสดงข้อมูลทั้งหมด)';
-
-    const html = `<!DOCTYPE html>
-<html lang="th"><head><meta charset="UTF-8">
-<title>${title}</title>
-<style>
-  @page { size: A4 landscape; margin: 12mm; }
-  * { box-sizing: border-box; }
-  body { font-family: 'Sarabun','Segoe UI',sans-serif; margin:0; padding:0; color:#1a1a1a; }
-  h1 { font-size:18px; margin:0 0 4px; }
-  h2 { font-size:14px; margin:22px 0 6px; }
-  .meta { font-size:12px; color:#666; margin-bottom:10px; }
-  table { width:100%; border-collapse:collapse; font-size:11px; margin-bottom:8px; }
-  thead th { background:#7048B8; color:#fff; text-align:left; padding:6px 8px; font-weight:700; white-space:nowrap; }
-  tbody td { padding:5px 8px; border-bottom:1px solid #e5e5e5; vertical-align:top; }
-  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
-  tr.sub td { font-weight:800; background:#F1E9FB; }
-  tr { break-inside: avoid; }
-  thead { display: table-header-group; }
-</style></head>
-<body>
-  <h1>${title}</h1>
-  <div class="meta">พิมพ์เมื่อ ${now} &middot; ตัวกรองที่ใช้: ${activeFiltersText}</div>
-
-  <h2>ตารางสรุปตาม ชื่อ GL</h2>
+    const tableHtml = `
   <table>
     <thead><tr>
       <th>ชื่อ GL</th><th>โครงการ</th>
@@ -1782,26 +1783,46 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         <td class="num">${vfmtSigned(grandTotal.newAmt-grandTotal.oldAmt)}</td>
       </tr>
     </tbody>
-  </table>
+  </table>`;
+    openVerifyPdf('ตารางสรุปตาม ชื่อ GL (เดือนเก่า vs เดือนใหม่)', tableHtml);
+  });
 
-  <h2>ตารางรายละเอียด (${detRows.length.toLocaleString('th-TH')} รายการ)</h2>
+  // ---------- Export: ตารางรายละเอียด ----------
+  document.getElementById('btn-verify-detail-export-excel').addEventListener('click', () => {
+    const detRows = vsortRows(getVerifySearchedRows(), vstate.detailSort);
+    const detAoa = [['PimaryKEY','ชื่อ GL','กอง','สคจ./สคล.','โครงการ','จำนวนเงิน (เดือนเก่า)','จำนวนเงิน (เดือนใหม่)','เพิ่ม/ลด']];
+    detRows.forEach(r => detAoa.push([r.key, r.gl, r.kong, r.sckl, r.proj, r.old, r.new, r.diff]));
+    const wsDet = XLSX.utils.aoa_to_sheet(detAoa);
+    wsDet['!cols'] = [{wch:14},{wch:22},{wch:8},{wch:20},{wch:30},{wch:18},{wch:18},{wch:16}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsDet, 'รายละเอียด');
+    XLSX.writeFile(wb, 'ตรวจสอบข้อมูลต้นฉบับ_รายละเอียด.xlsx');
+  });
+
+  document.getElementById('btn-verify-detail-export-pdf').addEventListener('click', () => {
+    const detRows = vsortRows(getVerifySearchedRows(), vstate.detailSort);
+    const detBody = detRows.map(r => `
+      <tr>
+        <td>${r.key}</td>
+        <td>${r.gl}</td>
+        <td>${r.kong}</td>
+        <td>${r.sckl}</td>
+        <td>${r.proj}</td>
+        <td class="num">${r.old>0?vfmtMoney(r.old):'–'}</td>
+        <td class="num">${r.new>0?vfmtMoney(r.new):'–'}</td>
+        <td class="num">${vfmtSigned(r.diff)}</td>
+      </tr>`).join('');
+    const tableHtml = `
+  <div class="meta">ทั้งหมด ${detRows.length.toLocaleString('th-TH')} รายการ</div>
   <table>
     <thead><tr>
       <th>PimaryKEY</th><th>ชื่อ GL</th><th>กอง</th><th>สคจ./สคล.</th><th>โครงการ</th>
       <th class="num">จำนวนเงิน (เก่า)</th><th class="num">จำนวนเงิน (ใหม่)</th><th class="num">เพิ่ม/ลด</th>
     </tr></thead>
     <tbody>${detBody}</tbody>
-  </table>
-
-  <script>
-    window.onload = function(){ setTimeout(function(){ window.print(); }, 400); };
-  <\/script>
-</body></html>`;
-    const blob = new Blob([html], {type:'text/html'});
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-  }
-  document.getElementById('btn-verify-export-pdf').addEventListener('click', verifyExportPdf);
+  </table>`;
+    openVerifyPdf('ตารางรายละเอียด (เดือนเก่า vs เดือนใหม่)', tableHtml);
+  });
 
   // ---------- Tab switching ----------
   const tabBtnMain = document.getElementById('tab-btn-main');
