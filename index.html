@@ -1406,51 +1406,37 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   }
 
   // ---------- การ์ด ----------
+  // เริ่มต้นแบบง่าย 4 ใบ: เดือนเก่า(ราย/บาท) + เดือนใหม่(ราย/บาท) ใช้ยอดรวมดิบชุดเดียวกับตารางสรุป
+  // คลิกเพื่อกรองตาราง (ผูกกับตัวกรอง "เดือน" ตัวเดียวกับ dropdown) ส่วนการ์ดอื่นๆ จะค่อยๆ เพิ่มทีหลัง
   function renderVerifyCards(){
-    const rows = detailRowsExcluding(['card']);
-    const byCat = { up:[], down:[], same:[] };
-    rows.forEach(r => byCat[cardCategory(r)].push(r));
-
-    const sumOld = arr => arr.reduce((s,r)=>s+r.old,0);
-    const sumNew = arr => arr.reduce((s,r)=>s+r.new,0);
-    const sumDiff = arr => arr.reduce((s,r)=>s+r.diff,0);
-
-    const totalCount = rows.length;
-    const totalOld = sumOld(rows), totalNew = sumNew(rows), totalDiff = sumDiff(rows);
-    const oldPresentCount = rows.filter(r=>r.old>0).length;
-    const newPresentCount = rows.filter(r=>r.new>0).length;
-
-    const active = vstate.filters.card;
-    const isActive = v => (v !== 'all' && active === v) ? 'active' : '';
+    const g = vstate._lastGrandTotal || {oldN:0,oldAmt:0,newN:0,newAmt:0};
+    const activePeriod = vstate.filters.period;
+    const isActive = v => activePeriod === v ? 'active' : '';
 
     const cardsHtml = `
-      <div class="card c-net ${isActive('all')}" data-vcard="all" role="button" tabindex="0">
-        <div class="card-label"><span class="dot"></span>รวมทั้งหมด</div>
-        <div class="card-amount">${vfmtSigned(totalDiff)}<small>บาท</small></div>
-        <div class="card-count">จำนวน <b>${vfmtInt(totalCount)}</b> รายการ &middot; เก่า ${vfmtInt(oldPresentCount)} / ใหม่ ${vfmtInt(newPresentCount)}</div>
+      <div class="card c-existing ${isActive('old')}" data-vperiod="old" role="button" tabindex="0">
+        <div class="card-label"><span class="dot"></span>เดือนเก่า &middot; ราย</div>
+        <div class="card-amount">${vfmtInt(g.oldN)}<small>รายการ</small></div>
       </div>
-      <div class="card c-existing ${isActive('up')}" data-vcard="up" role="button" tabindex="0">
-        <div class="card-label"><span class="dot"></span>เพิ่มขึ้น</div>
-        <div class="card-amount">${vfmtSigned(sumDiff(byCat.up))}<small>บาท</small></div>
-        <div class="card-count">จำนวน <b>${vfmtInt(byCat.up.length)}</b> รายการ</div>
+      <div class="card c-existing ${isActive('old')}" data-vperiod="old" role="button" tabindex="0">
+        <div class="card-label"><span class="dot"></span>เดือนเก่า &middot; บาท</div>
+        <div class="card-amount">${vfmtMoney(g.oldAmt)}<small>บาท</small></div>
       </div>
-      <div class="card c-new ${isActive('down')}" data-vcard="down" role="button" tabindex="0">
-        <div class="card-label"><span class="dot"></span>ลดลง</div>
-        <div class="card-amount">${vfmtSigned(sumDiff(byCat.down))}<small>บาท</small></div>
-        <div class="card-count">จำนวน <b>${vfmtInt(byCat.down.length)}</b> รายการ</div>
+      <div class="card c-new ${isActive('new')}" data-vperiod="new" role="button" tabindex="0">
+        <div class="card-label"><span class="dot"></span>เดือนใหม่ &middot; ราย</div>
+        <div class="card-amount">${vfmtInt(g.newN)}<small>รายการ</small></div>
       </div>
-      <div class="card c-clear ${isActive('same')}" data-vcard="same" role="button" tabindex="0">
-        <div class="card-label"><span class="dot"></span>คงที่</div>
-        <div class="card-amount">${vfmtMoney(0)}<small>บาท</small></div>
-        <div class="card-count">จำนวน <b>${vfmtInt(byCat.same.length)}</b> รายการ</div>
+      <div class="card c-new ${isActive('new')}" data-vperiod="new" role="button" tabindex="0">
+        <div class="card-label"><span class="dot"></span>เดือนใหม่ &middot; บาท</div>
+        <div class="card-amount">${vfmtMoney(g.newAmt)}<small>บาท</small></div>
       </div>
     `;
     const el = document.getElementById('verify-cards');
     el.innerHTML = cardsHtml;
-    el.querySelectorAll('[data-vcard]').forEach(card => {
+    el.querySelectorAll('[data-vperiod]').forEach(card => {
       const activate = () => {
-        const v = card.dataset.vcard;
-        vstate.filters.card = (vstate.filters.card === v) ? 'all' : v;
+        const v = card.dataset.vperiod;
+        vstate.filters.period = (vstate.filters.period === v) ? 'all' : v;
         vstate.detailPage = 1;
         renderVerifyAll();
       };
@@ -1653,8 +1639,8 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   function renderVerifyAll(){
     syncVerifySelects();
     renderVerifyChips();
-    renderVerifyCards();
     renderVerifySummary();
+    renderVerifyCards();
     renderVerifyDetail();
   }
 
