@@ -98,9 +98,13 @@ select.filter-select:hover{border-color:#8A8578;}
 /* ============ Searchable combobox (โครงการ) ============ */
 .combo{position:relative;}
 .combo-trigger{
+  font-family:inherit; font-size:15px; font-weight:600; color:var(--text);
+  padding:9px 34px 9px 14px; border-radius:999px; border:1.5px solid var(--border-strong);
+  background:var(--surface); cursor:pointer;
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   text-align:left; min-width:220px; max-width:260px;
 }
+.combo-trigger:hover{border-color:#8A8578;}
 .combo-trigger::after{
   content:""; width:14px; height:14px; flex:none; margin-inline-start:6px;
   background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235A564C' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>") no-repeat center / contain;
@@ -437,8 +441,19 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       <select id="f-verify-sckl" class="filter-select"></select>
     </div>
     <div class="filter-group">
-      <label for="f-verify-proj">โครงการ</label>
-      <select id="f-verify-proj" class="filter-select"></select>
+      <label for="verify-proj-combo-trigger">โครงการ</label>
+      <div class="combo" id="verify-proj-combo">
+        <button type="button" class="combo-trigger" id="verify-proj-combo-trigger" aria-haspopup="listbox" aria-expanded="false">
+          <span id="verify-proj-combo-label">ทุกโครงการ</span>
+        </button>
+        <div class="combo-panel" id="verify-proj-combo-panel" hidden>
+          <div class="combo-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="verify-proj-combo-search" placeholder="พิมพ์ชื่อโครงการ...">
+          </div>
+          <div class="combo-list" id="verify-proj-combo-list" role="listbox"></div>
+        </div>
+      </div>
     </div>
     <div class="filter-group">
       <label for="f-verify-period">เดือน</label>
@@ -1481,7 +1496,107 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   populateVerifySelect('f-verify-gl', 'gl', 'ทุก GL', detailRowsAll);
   populateVerifySelect('f-verify-kong', 'kong', 'ทุกกอง', detailRowsAll);
   populateVerifySelect('f-verify-sckl', 'sckl', 'ทุกสคจ./สคล.', detailRowsAll);
-  populateVerifySelect('f-verify-proj', 'proj', 'ทุกโครงการ', detailRowsAll);
+
+  // ---------- โครงการ: searchable combobox (โครงการเยอะ ต้องพิมพ์ค้นหา) ----------
+  const VPROJ_COUNTS = (() => {
+    const m = new Map();
+    detailRowsAll.forEach(r => { if (r.proj) m.set(r.proj, (m.get(r.proj)||0) + 1); });
+    return m;
+  })();
+  const VPROJ_ALL = Array.from(VPROJ_COUNTS.keys()).sort((a,b)=>a.localeCompare(b,'th'));
+  const VPROJ_POPULAR = Array.from(VPROJ_COUNTS.entries()).sort((a,b)=>b[1]-a[1]).slice(0,8).map(e=>e[0]);
+
+  function syncVerifyProjComboLabel(){
+    const label = document.getElementById('verify-proj-combo-label');
+    label.textContent = vstate.filters.proj === 'all' ? 'ทุกโครงการ' : vstate.filters.proj;
+  }
+
+  function setupVerifyProjCombo(){
+    const trigger = document.getElementById('verify-proj-combo-trigger');
+    const panel = document.getElementById('verify-proj-combo-panel');
+    const searchInput = document.getElementById('verify-proj-combo-search');
+    const listEl = document.getElementById('verify-proj-combo-list');
+    let highlightIdx = -1;
+
+    function currentOptions(query){
+      if (!query) return null;
+      const q = query.toLowerCase();
+      return VPROJ_ALL.filter(p => p.toLowerCase().includes(q));
+    }
+
+    function renderList(){
+      const query = searchInput.value.trim();
+      const filtered = currentOptions(query);
+      let html = '';
+      html += `<button type="button" class="combo-item ${vstate.filters.proj==='all'?'selected':''}" data-val="all">
+        <span>ทุกโครงการ</span><span class="combo-count">${vfmtInt(detailRowsAll.length)}</span>
+      </button>`;
+      if (filtered === null){
+        html += `<div class="combo-section-label">โครงการยอดนิยม</div>`;
+        VPROJ_POPULAR.forEach(p=>{
+          html += `<button type="button" class="combo-item ${vstate.filters.proj===p?'selected':''}" data-val="${encodeURIComponent(p)}">
+            <span>${p}</span><span class="combo-count">${vfmtInt(VPROJ_COUNTS.get(p))} ราย</span>
+          </button>`;
+        });
+      } else if (filtered.length === 0){
+        html += `<div class="combo-empty">ไม่พบโครงการที่ค้นหา</div>`;
+      } else {
+        html += `<div class="combo-section-label">ผลการค้นหา (${vfmtInt(filtered.length)})</div>`;
+        filtered.forEach(p=>{
+          html += `<button type="button" class="combo-item ${vstate.filters.proj===p?'selected':''}" data-val="${encodeURIComponent(p)}">
+            <span>${p}</span><span class="combo-count">${vfmtInt(VPROJ_COUNTS.get(p))} ราย</span>
+          </button>`;
+        });
+      }
+      listEl.innerHTML = html;
+      highlightIdx = -1;
+      listEl.querySelectorAll('.combo-item').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          const v = btn.getAttribute('data-val');
+          vstate.filters.proj = (v === 'all') ? 'all' : decodeURIComponent(v);
+          vstate.detailPage = 1;
+          syncVerifyProjComboLabel();
+          searchInput.blur();
+          setTimeout(closePanel, 0);
+          renderVerifyAll();
+        });
+      });
+    }
+
+    function openPanel(){
+      panel.hidden = false;
+      trigger.setAttribute('aria-expanded','true');
+      searchInput.value = '';
+      renderList();
+      setTimeout(()=>searchInput.focus(), 10);
+    }
+    function closePanel(){
+      panel.hidden = true;
+      trigger.setAttribute('aria-expanded','false');
+    }
+
+    trigger.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if (panel.hidden) openPanel(); else closePanel();
+    });
+    searchInput.addEventListener('input', renderList);
+    searchInput.addEventListener('keydown', (e)=>{
+      const items = Array.from(listEl.querySelectorAll('.combo-item'));
+      if (e.key === 'ArrowDown'){ e.preventDefault(); highlightIdx = Math.min(items.length-1, highlightIdx+1); }
+      else if (e.key === 'ArrowUp'){ e.preventDefault(); highlightIdx = Math.max(0, highlightIdx-1); }
+      else if (e.key === 'Enter'){ e.preventDefault(); if (items[highlightIdx]) items[highlightIdx].click(); return; }
+      else if (e.key === 'Escape'){ closePanel(); return; }
+      else return;
+      items.forEach((it,i)=>it.classList.toggle('highlighted', i===highlightIdx));
+      if (items[highlightIdx]) items[highlightIdx].scrollIntoView({block:'nearest'});
+    });
+    document.addEventListener('pointerdown', (e)=>{
+      if (!panel.hidden && !document.getElementById('verify-proj-combo').contains(e.target)) closePanel();
+    });
+  }
+  setupVerifyProjCombo();
 
   function matchesDim(row, excludeKeys){
     for (const k of ['gl','kong','sckl','proj','group']){
@@ -1584,11 +1699,12 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   }
 
   function syncVerifySelects(){
-    ['gl','kong','sckl','proj'].forEach(k => {
+    ['gl','kong','sckl'].forEach(k => {
       const sel = document.getElementById('f-verify-'+k);
       sel.value = vstate.filters[k] === 'all' ? 'all' : encodeURIComponent(vstate.filters[k]);
     });
     document.getElementById('f-verify-period').value = vstate.filters.period;
+    syncVerifyProjComboLabel();
   }
 
   document.getElementById('btn-verify-reset').addEventListener('click', () => {
