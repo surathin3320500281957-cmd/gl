@@ -1419,6 +1419,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   const vfmtInt = n => Math.round(n).toLocaleString('th-TH');
   const vfmtSigned = n => (n>0?'+':'') + vfmtMoney(n);
   const vfmtIntSigned = n => (n>0?'+':'') + vfmtInt(n);
+  const vdiffColor = n => n > 0 ? 'var(--up)' : (n < 0 ? 'var(--down)' : 'var(--text-faint)');
   const vdash = '<span class="vdash">–</span>';
 
   const oldRawAll = VDATA.oldRaw.map(r => ({ gl: VDATA.gl[r[0]], kong: VDATA.kong[r[1]], sckl: VDATA.sckl[r[2]], proj: VDATA.proj[r[3]], group: VDATA.group[r[4]], amt: r[5] }));
@@ -1627,8 +1628,8 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
           <td class="num">${vfmtMoney(r.oldAmt)}</td>
           <td class="num">${vfmtInt(r.newN)}</td>
           <td class="num">${vfmtMoney(r.newAmt)}</td>
-          <td class="num">${vfmtIntSigned(diffN)}</td>
-          <td class="num">${vfmtSigned(diffAmt)}</td>
+          <td class="num" style="color:${vdiffColor(diffN)}">${vfmtIntSigned(diffN)}</td>
+          <td class="num" style="color:${vdiffColor(diffAmt)}">${vfmtSigned(diffAmt)}</td>
         </tr>`;
       });
       const dN = g.sub.newN - g.sub.oldN;
@@ -1640,8 +1641,8 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
           <td class="num">${vfmtMoney(g.sub.oldAmt)}</td>
           <td class="num">${vfmtInt(g.sub.newN)}</td>
           <td class="num">${vfmtMoney(g.sub.newAmt)}</td>
-          <td class="num">${vfmtIntSigned(dN)}</td>
-          <td class="num">${vfmtSigned(dAmt)}</td>
+          <td class="num" style="color:${vdiffColor(dN)}">${vfmtIntSigned(dN)}</td>
+          <td class="num" style="color:${vdiffColor(dAmt)}">${vfmtSigned(dAmt)}</td>
         </tr>`;
     });
     if (glGroups.length === 0){
@@ -1652,8 +1653,8 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     document.getElementById('verify-summary-total-old-amt').textContent = vfmtMoney(grandTotal.oldAmt);
     document.getElementById('verify-summary-total-new-n').textContent = vfmtInt(grandTotal.newN);
     document.getElementById('verify-summary-total-new-amt').textContent = vfmtMoney(grandTotal.newAmt);
-    document.getElementById('verify-summary-total-diff-n').textContent = vfmtIntSigned(grandTotal.newN - grandTotal.oldN);
-    document.getElementById('verify-summary-total-diff-amt').textContent = vfmtSigned(grandTotal.newAmt - grandTotal.oldAmt);
+    { const el = document.getElementById('verify-summary-total-diff-n'); const v = grandTotal.newN - grandTotal.oldN; el.textContent = vfmtIntSigned(v); el.style.color = vdiffColor(v); }
+    { const el = document.getElementById('verify-summary-total-diff-amt'); const v = grandTotal.newAmt - grandTotal.oldAmt; el.textContent = vfmtSigned(v); el.style.color = vdiffColor(v); }
 
     // เก็บไว้ใช้ export
     vstate._lastGlGroups = glGroups;
@@ -1776,7 +1777,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         <td>${r.proj}</td>
         <td class="num">${r.old>0?vfmtMoney(r.old):vdash}</td>
         <td class="num">${r.new>0?vfmtMoney(r.new):vdash}</td>
-        <td class="num">${vfmtSigned(r.diff)}</td>
+        <td class="num" style="color:${vdiffColor(r.diff)}">${vfmtSigned(r.diff)}</td>
       </tr>
     `).join('') : '<tr><td colspan="8" style="text-align:center; color:var(--text-faint); padding:24px;">ไม่พบข้อมูลตามตัวกรองที่เลือก</td></tr>';
 
