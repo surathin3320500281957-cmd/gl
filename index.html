@@ -228,6 +228,13 @@ section{margin-bottom:40px;}
 .cards{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
 @media (max-width:1100px){.cards{grid-template-columns:repeat(2,1fr);}}
 @media (max-width:640px){.cards{grid-template-columns:1fr;}}
+#verify-cards{grid-template-columns:repeat(3,1fr);}
+@media (max-width:900px){#verify-cards{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:640px){#verify-cards{grid-template-columns:1fr;}}
+.card.c-diff{cursor:default;}
+.card.c-diff:hover{box-shadow:var(--shadow-1); transform:none;}
+.card.c-diff::before{background:var(--net);}
+.c-diff .dot{background:var(--net);}
 .card{
   background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
   padding:22px 22px 20px; box-shadow:var(--shadow-1); position:relative; overflow:hidden;
@@ -1487,23 +1494,34 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     const g = vstate._lastGrandTotal || {oldN:0,oldAmt:0,newN:0,newAmt:0};
     const activePeriod = vstate.filters.period;
     const isActive = v => activePeriod === v ? 'active' : '';
+    const diffN = g.newN - g.oldN;
+    const diffAmt = g.newAmt - g.oldAmt;
+    const diffColor = (v) => v > 0 ? 'var(--up)' : (v < 0 ? 'var(--down)' : 'var(--text-faint)');
 
     const cardsHtml = `
       <div class="card c-existing ${isActive('old')}" data-vperiod="old" role="button" tabindex="0">
         <div class="card-label"><span class="dot"></span>เดือนเก่า &middot; ราย</div>
         <div class="card-amount">${vfmtInt(g.oldN)}<small>รายการ</small></div>
       </div>
+      <div class="card c-new ${isActive('new')}" data-vperiod="new" role="button" tabindex="0">
+        <div class="card-label"><span class="dot"></span>เดือนใหม่ &middot; ราย</div>
+        <div class="card-amount">${vfmtInt(g.newN)}<small>รายการ</small></div>
+      </div>
+      <div class="card c-diff">
+        <div class="card-label"><span class="dot"></span>ส่วนต่าง &middot; ราย</div>
+        <div class="card-amount" style="color:${diffColor(diffN)}">${vfmtIntSigned(diffN)}<small>รายการ</small></div>
+      </div>
       <div class="card c-existing ${isActive('old')}" data-vperiod="old" role="button" tabindex="0">
         <div class="card-label"><span class="dot"></span>เดือนเก่า &middot; บาท</div>
         <div class="card-amount">${vfmtMoney(g.oldAmt)}<small>บาท</small></div>
       </div>
       <div class="card c-new ${isActive('new')}" data-vperiod="new" role="button" tabindex="0">
-        <div class="card-label"><span class="dot"></span>เดือนใหม่ &middot; ราย</div>
-        <div class="card-amount">${vfmtInt(g.newN)}<small>รายการ</small></div>
-      </div>
-      <div class="card c-new ${isActive('new')}" data-vperiod="new" role="button" tabindex="0">
         <div class="card-label"><span class="dot"></span>เดือนใหม่ &middot; บาท</div>
         <div class="card-amount">${vfmtMoney(g.newAmt)}<small>บาท</small></div>
+      </div>
+      <div class="card c-diff">
+        <div class="card-label"><span class="dot"></span>ส่วนต่าง &middot; บาท</div>
+        <div class="card-amount" style="color:${diffColor(diffAmt)}">${vfmtSigned(diffAmt)}<small>บาท</small></div>
       </div>
     `;
     const el = document.getElementById('verify-cards');
