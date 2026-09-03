@@ -954,7 +954,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 
   // ---------- Chips / Reset ----------
   const FILTER_LABELS = { kong:'กอง', sckl:'สคจ./สคล.', proj:'โครงการ', gl:'GL', group:'กลุ่มการดำเนินงาน', card:'กลุ่ม', chg:'ส่วนต่าง (รายเดิม)', period:'เดือน' };
-  const CARD_CHIP_TEXT = { 'net':'ยอดรวมสุทธิ (รายเดิม+รายใหม่)', 'รายเดิม':'รายเดิม', 'รายใหม่':'รายใหม่', 'Clear':'Clear' };
+  const CARD_CHIP_TEXT = { 'net':'GL เดือนนี้ (ไม่รวม Clear)', 'รายเดิม':'รายเดิม', 'รายใหม่':'รายใหม่', 'Clear':'Clear' };
   const PERIOD_CHIP_TEXT = { 'old':'เดือนเก่า', 'new':'เดือนใหม่' };
   function renderChips(){
     const wrap = document.getElementById('chips-row');
@@ -1040,7 +1040,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 
     const cardsHtml = `
       <div class="card c-net ${isActive('net')}" data-card="net" role="button" tabindex="0">
-        <div class="card-label"><span class="dot"></span>ยอดรวมสุทธิ (รายเดิม + รายใหม่)</div>
+        <div class="card-label"><span class="dot"></span>GL เดือนนี้ (ไม่รวม Clear)</div>
         <div class="card-amount">${fmtMoney(netTotalAmt)}<small>บาท</small></div>
         <div class="card-count">จำนวน <b>${fmtInt(netTotalCount)}</b> รายการ</div>
       </div>
