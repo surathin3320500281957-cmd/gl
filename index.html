@@ -251,6 +251,7 @@ section{margin-bottom:40px;}
 }
 .alert-gl-row .gl-name{ color:var(--text); font-weight:600; }
 .alert-gl-row .gl-amt{ color:#E8590C; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.alert-gl-row .gl-forecast{ color:var(--text-muted); font-weight:600; font-size:12px; margin-inline-start:4px; }
 @media (max-width:1100px){.cards{grid-template-columns:repeat(2,1fr);}}
 @media (max-width:640px){.cards{grid-template-columns:1fr;}}
 #verify-cards{grid-template-columns:repeat(3,1fr);}
@@ -1463,7 +1464,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     document.getElementById('note-new-amt').textContent = fmtMoney(noteNewTotal);
   } catch(e) { /* เงียบไว้ ถ้าไม่มีข้อมูล verify-data ก็ไม่ต้องขึ้นตัวเลข */ }
 
-  // ---------- แจ้งเตือน: GL รอโอนออกรวม + ยอดแยกตามชื่อ GL (มากไปน้อย) ----------
+  // ---------- แจ้งเตือน: GL รอโอนออกรวม + ยอดแยกตามชื่อ GL (มากไปน้อย) + คาดการณ์ ----------
   try {
     const alertRows = ROWS.filter(r => r.type === 'รายเดิม' || r.type === 'รายใหม่'); // ไม่รวม Clear
     const alertTotal = alertRows.reduce((s,r)=>s+r.net,0);
@@ -1471,9 +1472,13 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
     document.getElementById('alert-total-count').textContent = fmtInt(alertRows.length);
 
     const glMap = new Map();
+    const glDoneMap = new Map(); // ยอด "ดำเนินการเสร็จสิ้นแล้ว" ต่อ GL ใช้เป็นคาดการณ์
     alertRows.forEach(r => {
       const g = r.gl || 'ไม่ระบุ';
       glMap.set(g, (glMap.get(g)||0) + r.net);
+      if (r.group === 'ดำเนินการเสร็จสิ้นแล้ว'){
+        glDoneMap.set(g, (glDoneMap.get(g)||0) + r.net);
+      }
     });
     const glSorted = Array.from(glMap.entries())
       .filter(([g,amt]) => amt >= 1000000)
@@ -1481,10 +1486,14 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
 
     const listEl = document.getElementById('alert-groups-list');
     if (glSorted.length){
-      listEl.innerHTML = '<div class="alert-list-heading">GL ที่ยอดเกิน 1,000,000 บาท</div>' +
-        glSorted.map(([g,amt]) =>
-          `<div class="alert-gl-row"><span class="gl-name">${g}</span><span class="gl-amt">${fmtMoney(amt)} บาท</span></div>`
-        ).join('');
+      listEl.innerHTML = '<div class="alert-list-heading">GL ที่ยอดเกิน 1,000,000 บาท (พร้อมคาดการณ์จากยอด "ดำเนินการเสร็จสิ้นแล้ว")</div>' +
+        glSorted.map(([g,amt]) => {
+          const forecast = glDoneMap.get(g) || 0;
+          return `<div class="alert-gl-row">
+            <span class="gl-name">${g}</span>
+            <span class="gl-amt">${fmtMoney(amt)} บาท <span class="gl-forecast">(คาดการณ์: ${fmtMoney(forecast)} บาท)</span></span>
+          </div>`;
+        }).join('');
     } else {
       listEl.innerHTML = '';
     }
