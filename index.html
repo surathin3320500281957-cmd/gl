@@ -743,7 +743,6 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
             <th data-key="key">PrimaryKEY <span class="sort-arrow"></span></th>
             <th data-key="gl">ชื่อ GL <span class="sort-arrow"></span></th>
             <th>เดือน(ใหม่)</th>
-            <th class="num">จำนวนเงิน(ใหม่)</th>
             <th data-key="type">ประเภทรายการ <span class="sort-arrow"></span></th>
             <th data-key="kong">กอง <span class="sort-arrow"></span></th>
             <th data-key="sckl">สคจ./สคล. <span class="sort-arrow"></span></th>
@@ -752,6 +751,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
             <th>รายละเอียดดำเนินงาน</th>
             <th data-key="chg">ส่วนต่าง <span class="sort-arrow"></span></th>
             <th class="num" data-key="prev">จำนวนเงิน(เดือนก่อน) <span class="sort-arrow"></span></th>
+            <th class="num">จำนวนเงิน(ใหม่)</th>
             <th class="num" data-key="diff">จำนวนเงินส่วนต่าง <span class="sort-arrow"></span></th>
             <th class="num" data-key="net">จำนวนเงินสุทธิ <span class="sort-arrow"></span></th>
           </tr>
@@ -1266,7 +1266,6 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         <td>${r.key}</td>
         <td>${r.gl}</td>
         <td>${newMonthCell}</td>
-        <td class="num">${newAmountCell}</td>
         <td>${typePill(r.type)}</td>
         <td>${r.kong}</td>
         <td>${r.sckl}</td>
@@ -1275,6 +1274,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         <td class="detail-cell">${r.detail}</td>
         <td>${chgCell}</td>
         <td class="num">${prevCell}</td>
+        <td class="num">${newAmountCell}</td>
         <td class="num">${diffCell}</td>
         <td class="num">${fmtMoney(r.net)}</td>
       </tr>
@@ -1337,7 +1337,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
   document.getElementById('btn-export-excel').addEventListener('click', ()=>{
     const rows = getSearchedRows();
     const aoa = [[
-      'PrimaryKEY','ชื่อ GL','เดือน(ใหม่)','จำนวนเงิน(ใหม่)','ประเภทรายการ','กอง','สคจ./สคล.','โครงการ','กลุ่มการดำเนินงาน','รายละเอียดดำเนินงาน','ส่วนต่าง','จำนวนเงิน(เดือนก่อน)','จำนวนเงินส่วนต่าง','จำนวนเงินสุทธิ'
+      'PrimaryKEY','ชื่อ GL','เดือน(ใหม่)','ประเภทรายการ','กอง','สคจ./สคล.','โครงการ','กลุ่มการดำเนินงาน','รายละเอียดดำเนินงาน','ส่วนต่าง','จำนวนเงิน(เดือนก่อน)','จำนวนเงิน(ใหม่)','จำนวนเงินส่วนต่าง','จำนวนเงินสุทธิ'
     ]];
     rows.forEach(r=>{
       const isExisting = r.type === 'รายเดิม';
@@ -1346,13 +1346,13 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       aoa.push([
         r.key,
         r.gl,
-        showNew ? 'เดือนใหม่' : '-', showNew ? newAmount : 0,
+        showNew ? 'เดือนใหม่' : '-',
         r.type,r.kong,r.sckl,r.proj,r.group,r.detail,
-        isExisting?r.chg:'-', (isExisting&&r.first)?r.prev:0, (isExisting&&r.first)?r.diff:0, r.net
+        isExisting?r.chg:'-', (isExisting&&r.first)?r.prev:0, showNew ? newAmount : 0, (isExisting&&r.first)?r.diff:0, r.net
       ]);
     });
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{wch:14},{wch:22},{wch:12},{wch:16},{wch:10},{wch:8},{wch:20},{wch:24},{wch:26},{wch:40},{wch:10},{wch:16},{wch:16},{wch:16}];
+    ws['!cols'] = [{wch:14},{wch:22},{wch:12},{wch:10},{wch:8},{wch:20},{wch:24},{wch:26},{wch:40},{wch:10},{wch:16},{wch:16},{wch:16},{wch:16}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'รายละเอียด');
     XLSX.writeFile(wb, 'สรุปรายการ_เงินมัดจำ_เงินจอง.xlsx');
@@ -1377,7 +1377,6 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         <td>${r.key}</td>
         <td>${r.gl}</td>
         <td>${showNew ? 'เดือนใหม่' : dash}</td>
-        <td class="num">${showNew ? fmtMoney(newAmount) : dash}</td>
         <td>${typePill(r.type)}</td>
         <td>${r.kong}</td>
         <td>${r.sckl}</td>
@@ -1386,6 +1385,7 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         <td class="detail-cell">${r.detail}</td>
         <td>${chgCell}</td>
         <td class="num">${prevCell}</td>
+        <td class="num">${showNew ? fmtMoney(newAmount) : dash}</td>
         <td class="num">${diffCell}</td>
         <td class="num">${fmtMoney(r.net)}</td>
       </tr>`;
