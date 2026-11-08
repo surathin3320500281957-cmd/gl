@@ -240,19 +240,34 @@ section{margin-bottom:40px;}
 .alert-banner{
   margin-top:12px; padding:14px 18px; background:#FFF1EC; border:1px solid #F5B79A;
   border-radius:var(--radius-md); display:flex; gap:12px; align-items:flex-start;
-  font-size:13.5px; line-height:1.6; color:var(--text);
+  font-size:16px; line-height:1.65; color:var(--text);
 }
-.alert-banner svg{ flex:none; color:#E8590C; margin-top:2px; }
+.alert-banner svg{ flex:none; color:#E8590C; margin-top:4px; width:24px; height:24px; }
+.alert-banner > div{ flex:1; min-width:0; }
+.alert-forecast-total{
+  margin-top:12px; padding:14px 18px; background:#DDF5E8; border:2px solid #2FB57E; border-radius:var(--radius-md);
+  display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px 18px;
+}
+.alert-forecast-total .af-label{ font-size:16px; font-weight:700; color:#0B6B4D; }
+.alert-forecast-total .af-label small{ display:block; font-size:13px; font-weight:600; color:#2E7D5F; }
+.alert-forecast-total .af-amt{ font-size:28px; font-weight:800; color:#0B6B4D; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.alert-forecast-total .af-amt small{ font-size:16px; font-weight:700; margin-inline-start:4px; }
 .alert-gl-list{ margin-top:10px; display:flex; flex-direction:column; border-top:1px solid #F5B79A; }
-.alert-list-heading{ font-size:12px; font-weight:700; color:var(--text-muted); padding:8px 2px 4px; border-top:none; }
+.alert-list-heading{ font-size:14px; font-weight:700; color:var(--text-muted); padding:8px 2px 4px; border-top:none; }
 .alert-gl-row{
   display:flex; justify-content:space-between; align-items:baseline; gap:12px;
-  padding:7px 2px; border-bottom:1px dashed #F5B79A; font-size:13px;
+  padding:9px 2px; border-bottom:1px dashed #F5B79A; font-size:16px;
 }
 .alert-gl-row .gl-name{ color:var(--text); font-weight:600; }
 .alert-gl-row .gl-amt{ color:#E8590C; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.alert-gl-row .gl-forecast{ color:var(--text-muted); font-weight:600; font-size:12px; margin-inline-start:4px; }
+.alert-gl-row .gl-forecast{ color:#0B6B4D; font-weight:700; font-size:14.5px; margin-inline-start:6px; background:#DDF5E8; padding:2px 8px; border-radius:8px; }
 @media (max-width:1100px){.cards{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:640px){
+  .alert-banner{ font-size:14.5px; padding:12px 12px; }
+  .alert-gl-row{ flex-direction:column; align-items:flex-start; gap:4px; font-size:15px; }
+  .alert-gl-row .gl-amt{ white-space:normal; }
+  .alert-forecast-total .af-amt{ font-size:26px; }
+}
 @media (max-width:640px){.cards{grid-template-columns:1fr;}}
 #verify-cards{grid-template-columns:repeat(3,1fr);}
 @media (max-width:900px){#verify-cards{grid-template-columns:repeat(2,1fr);}}
@@ -668,6 +683,10 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
       <div>
         <b>มี GL รอโอนออก <span id="alert-total-amt">-</span> บาท (<span id="alert-total-count">-</span> รายการ) โปรดชี้แจงการดำเนินงาน ตามแบบฟอร์ม google sheet เพื่อ Update ลง Dashboard ต่อไป</b>
+        <div class="alert-forecast-total">
+          <span class="af-label">คาดการณ์รวม (ยอดกลุ่ม "ดำเนินการเสร็จสิ้นแล้ว" ทุก GL)<small id="alert-forecast-sub">-</small></span>
+          <span class="af-amt"><span id="alert-forecast-amt">-</span><small>บาท</small></span>
+        </div>
         <div id="alert-groups-list" class="alert-gl-list"></div>
       </div>
     </div>
@@ -1468,6 +1487,11 @@ footer{max-width:1440px; margin:0 auto; padding:0 24px 40px; color:var(--text-fa
         glDoneMap.set(g, (glDoneMap.get(g)||0) + r.net);
       }
     });
+    const forecastTotal = Array.from(glDoneMap.values()).reduce((s,v)=>s+v,0);
+    document.getElementById('alert-forecast-amt').textContent = fmtMoney(forecastTotal);
+    const fPct = alertTotal > 0 ? (forecastTotal / alertTotal * 100) : 0;
+    document.getElementById('alert-forecast-sub').textContent =
+      'คิดเป็น ' + fPct.toFixed(1) + '% ของ GL รอโอนออกทั้งหมด · คงเหลือหลังดำเนินการ ' + fmtMoney(alertTotal - forecastTotal) + ' บาท';
     const glSorted = Array.from(glMap.entries())
       .filter(([g,amt]) => amt >= 1000000)
       .sort((a,b) => b[1]-a[1]);
